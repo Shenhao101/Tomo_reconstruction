@@ -6,6 +6,5 @@ This repository includes the codes for reconstructing a global tomography model 
 * If you encounter any issues, have questions, or wish to contribute, please open a [GitHub Issue](https://github.com/Shenhao101/Tomo_reconstruction/issues) or start a [Discussion](https://github.com/Shenhao101/Tomo_reconstruction/discussions).
 
 ## Reference
-___
 If you use these codes in your own research, please cite the following papers:
 * Shen, H., Zhao, L., Guo, Z., Yuan, H., Yang, J., Wang, X., Guo, Z., Deng, C., Wu, F., 2023. Dynamic link between Neo-Tethyan subduction and atmospheric CO2 changes: insights from seismic tomography reconstruction. Science Bulletin 68, 637-644.
