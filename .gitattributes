@@ -4,3 +4,4 @@ Muller_etal_2019_Tectonics_v2.0_netCDF/** filter=lfs diff=lfs merge=lfs -text
 Muller_etal_2019_PlateMotionModel_v2.0_Tectonics_Updated/** filter=lfs diff=lfs merge=lfs -text
 Data_carbon_Muller2022/** filter=lfs diff=lfs merge=lfs -text
 Carbon_VolumeDensity_SubductionZone/** filter=lfs diff=lfs merge=lfs -text
+Carbon_flux/** filter=lfs diff=lfs merge=lfs -text
