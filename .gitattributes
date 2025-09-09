@@ -1,1 +1,2 @@
 Original_TomographyModel/ filter=lfs diff=lfs merge=lfs -text
+Original_TomographyModel/** filter=lfs diff=lfs merge=lfs -text
