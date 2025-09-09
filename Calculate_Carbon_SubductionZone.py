@@ -431,7 +431,7 @@ if __name__=='__main__':
     # calculate the carbon at subduction zone 
     Cores = multiprocessing.cpu_count()
     p = multiprocessing.Pool(processes=Cores)
-    reconstruction_age = np.arange(0, 1)
+    reconstruction_age = np.arange(0, 100)
     for age in reconstruction_age:
         # step1: extract the location of past subduction zone from plate motion model
         subduction = SubductionZone(rotation_model, topology_features, age)
