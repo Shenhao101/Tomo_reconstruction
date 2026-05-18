@@ -64,6 +64,12 @@ This script calculates the longitudinal distribution of subducted carbon flux to
 
 Output directory: Carbon_flux
 
+### 5. Long-term tectonic carbon cycle model
+```bash
+python ./Linear_regression/regression.py
+```
+This script establishes a tectonic forcing model through least-squares fitting to proxy-based CO2 records.
+
 ## Reference
 If you use these codes in your own research, please cite the following papers:
 * Shen, H., Zhao, L., Guo, Z., Yuan, H., Yang, J., Wang, X., Guo, Z., Deng, C., Wu, F., 2023. Dynamic link between Neo-Tethyan subduction and atmospheric CO2 changes: insights from seismic tomography reconstruction. Science Bulletin 68, 637-644.
