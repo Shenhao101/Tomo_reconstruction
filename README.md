@@ -18,6 +18,52 @@ conda env create -f environment.yml
 conda activate pygplates_py310
 ```
 
+## Workflow
+### 1. Time-domain reconstruction of tomography models
+
+```bash
+python Tomography.reconstruction.py
+```
+
+This script reconstructs the tomography model from the spatial domain into the geological time domain based on slab sinking rates.
+Output directory: Reconstructed_TomographyModel
+
+---
+
+### 2. Calculate carbon volume density at subduction zones
+
+```bash
+python Calculate_Carbon_SubductionZone.py
+```
+
+This script converts the carbon area density dataset from Müller et al. (2022) into carbon volume density using the half-space cooling model and extracts carbon density distributions at subduction zones.
+
+Output directory: Carbon_VolumeDensity_SubductionZone
+
+---
+
+### 3. Global subducted carbon flux calculation
+
+```bash
+python Calculate_subducted_Carbonflux.py
+```
+
+This script calculates the global carbon flux subducted into the mantle throughout geological history.
+
+Output directory: Carbon_flux
+
+---
+
+### 4. Longitudinal distribution of subducted carbon flux
+
+```bash
+python Calculate_subducted_Carbonflux_longitude.py
+```
+
+This script calculates the longitudinal distribution of subducted carbon flux to investigate spatial variations in carbon recycling.
+
+Output directory: Carbon_flux
+
 ## Reference
 If you use these codes in your own research, please cite the following papers:
 * Shen, H., Zhao, L., Guo, Z., Yuan, H., Yang, J., Wang, X., Guo, Z., Deng, C., Wu, F., 2023. Dynamic link between Neo-Tethyan subduction and atmospheric CO2 changes: insights from seismic tomography reconstruction. Science Bulletin 68, 637-644.
