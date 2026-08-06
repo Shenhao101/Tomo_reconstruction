@@ -22,10 +22,11 @@ conda activate pygplates_py310
 ### 1. Time-domain reconstruction of tomography models
 
 ```bash
-python Tomography.reconstruction.py
+python Tomography_reconstruction.py
 ```
 
 This script reconstructs the tomography model from the spatial domain into the geological time domain based on slab sinking rates.
+
 Output directory: Reconstructed_TomographyModel
 
 ---
