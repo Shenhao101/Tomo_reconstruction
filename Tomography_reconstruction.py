@@ -2,7 +2,11 @@
 """
 Created on Feb 28 17:33:21 2024
 
-Reconstruct the global tomography model 
+Reconstruct the global tomography model from spatial (depth slices) to temporal (age slices) domain.
+
+Input data: original global tomography model (eg., UU-P07, MITP08)
+
+Output data: age-coded global tomography model
 
 @author: m1335
 """
@@ -15,17 +19,19 @@ import math
 import os
 import glob
 import multiprocessing
-R = 6371
 
 
-# optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08，DETOX-P3, GLAD_M25
-Tomo_model = 'TX2019slab'
 # reconstruction parameters
+EARTH_RADIUS = 6371
+# optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, DETOX-P3, GLAD_M25
+TOMO_MODEL = 'TX2019slab'
+# reconstructed age period
+AGE_RECON = np.arange(1, 101)
 # The maximum distance between points in the tomography model and subduction zone above 410km
-Dmax = 200
-#processing depth of the residual tomography model
-Dep_pro = 410
-output_path = 'Reconstructed_TomographyModel/{}_Dmax{}_newrate/'.format(Tomo_model, Dmax)
+DMAX = 150
+# processing depth of the residual tomography model
+DEP_PRO = 410
+OUTPUT_PATH = 'Reconstructed_TomographyModel/{}_Dmax{}/'.format(TOMO_MODEL, DMAX)
 
 
 def mkdir(path):
@@ -35,9 +41,9 @@ def mkdir(path):
 
 def load_TX2019slab(fname):
     file = Dataset(fname)
-    Depth = file.variables['depth'][:]#22 * 1
-    dV = file.variables['dvp'][:]#22*181*361
-    return Depth, dV
+    depth = file.variables['depth'][:]#22 * 1
+    dv = file.variables['dvp'][:]#22*181*361
+    return depth, dv
 
 
 def load_UUP07(fname):
@@ -362,32 +368,45 @@ def read_SubductionZone_coordinate(age):
     return SubductionZone
     
 
-# calculating time-depth correlation
 def time_depth(age):
+    """
+    calculating corresponding depth of subducted slabs at specific age.
+
+    Parameters:
+    -----------
+    age: int
+        Geological age in Ma.
+    
+    Returns:
+    --------
+    depth : ndarray
+        2D array of global slab depths (km).
+    depth_mean: float
+        Mean depth (km).
+    """
 
     upper_rate = getRate.upper_mantle() # dict shape: age_length * 1
     lower_rate = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
 
-    # calculate the time needed to sink into the lower mantle
+    # calculate the time needed for the slab to sink into the lower mantle
     subducted_depth = 0
-    time = 0
+    time_upper = 0
     for j in range(age):
         temp = subducted_depth + upper_rate[str(age-j)]
         if temp <= 410:
             flag = False 
             subducted_depth = temp
-            time += 1
+            time_upper += 1
         else:
             flag = True
             break
-    
-    time += (410-subducted_depth) / upper_rate[str(age-j)]
+    time_upper += (410-subducted_depth) / upper_rate[str(age-j)]
     
     # calculate slab depth at specified age 
     if flag == False: # slab in the upper mantle
         depth = np.full(lower_rate.shape, subducted_depth)
     else: # slab in the lower mantle
-        depth = 410 + (age - time) * lower_rate
+        depth = 410 + (age - time_upper) * lower_rate
 
     depth_mean = np.average(depth, axis=None, weights=None)
     return depth, depth_mean
@@ -413,7 +432,7 @@ def search_nearest_SubductionZone(depth, latitude, longitude, data):
         if distance <= dis_min:
             dis_min = distance 
             data_min = data[i]
-    if dis_min < Dmax:
+    if dis_min < dmax:
         flag = 1
     else:
         flag = 0
@@ -459,9 +478,12 @@ def interpolation(depth, dV, interpdep, SubductionZone):
 
 
 def reconstruction(age, Depth, dV):
-    print('The %d Ma begin!' % age)
-    Interpdep, Depth_mean = time_depth(age)
-    print(f'Depth_mean at {age} Ma is {Depth_mean} km.')
+
+    print('Reconstruction at %d Ma begin!' % age)
+
+    interpdep, depth_mean = time_depth(age)
+    print(f'Mean depth at {age} Ma is {depth_mean} km.')
+
     # read subduction zone coordinate extracted from plate motion model
     SubductionZone = read_SubductionZone_coordinate(age)
 
@@ -494,39 +516,38 @@ def reconstruction(age, Depth, dV):
 if __name__ == '__main__':
     
     # read global tomography model
-    if Tomo_model == 'TX2019slab':
+    if TOMO_MODEL == 'TX2019slab':
         fname = 'Original_TomographyModel/TX2019slab_percent.nc'
-        Depth, dV = load_TX2019slab(fname)
-    elif Tomo_model == 'UU-P07':
+        depth, dv = load_TX2019slab(fname)
+    elif TOMO_MODEL == 'UU-P07':
         fname = 'Original_TomographyModel/UU-P07_lon_lat_depth_%dVp_cell_depth_midpoint.txt'
-        Depth, dV = load_UUP07(fname)
-    elif Tomo_model == 'LLNL_G3D_JPS':
+        depth, dv = load_UUP07(fname)
+    elif TOMO_MODEL == 'LLNL_G3D_JPS':
         fname = 'Original_TomographyModel/LLNL_G3D_JPS/LLNL_G3D_JPS.Interpolated.{}.txt'
-        Depth, dV = load_LLNL_G3D_JPS(fname)
-    elif Tomo_model == 'LLNL_G3Dv3':
+        depth, dv = load_LLNL_G3D_JPS(fname)
+    elif TOMO_MODEL == 'LLNL_G3Dv3':
         directory = 'Original_TomographyModel/LLNL_G3Dv3/LLNL_G3Dv3_interpolated/'
-        Depth, dV = load_LLNL_G3Dv3(directory)
-    elif Tomo_model == 'GYPSUM':
+        depth, dv = load_LLNL_G3Dv3(directory)
+    elif TOMO_MODEL == 'GYPSUM':
         fname = 'Original_TomographyModel/GYPSUM_percent.nc'
-        Depth, dV = load_GYPSUM(fname)
-    elif Tomo_model == 'MITP08':
+        depth, dv = load_GYPSUM(fname)
+    elif TOMO_MODEL == 'MITP08':
         fname = 'Original_TomographyModel/MITP08.txt'
-        Depth, dV = load_MITP08(fname)
-    elif Tomo_model == 'DETOX-P3':
+        depth, dv = load_MITP08(fname)
+    elif TOMO_MODEL == 'DETOX-P3':
         directory = 'Original_TomographyModel/DETOX-P3/'
-        Depth, dV = load_DETOXP3(directory)
-    elif Tomo_model == 'GLAD_M25':
+        depth, dv = load_DETOXP3(directory)
+    elif TOMO_MODEL == 'GLAD_M25':
         fname = 'Original_TomographyModel/GLAD_M25/glad-m25-vp-0.0-n4.nc'
-        Depth, dV = load_GLAD_M25(fname)
+        depth, dv = load_GLAD_M25(fname)
 
 
-    # reconstruction
-    mkdir(output_path)
+    # reconstruction 
+    mkdir(OUTPUT_PATH)
     Cores = multiprocessing.cpu_count()
     p = multiprocessing.Pool(processes=Cores)
-    Age = np.arange(1, 101)
-    for i in range(len(Age)):
-        p.apply_async(reconstruction, args=(Age[i], Depth, dV))
+    for i in range(len(AGE_RECON)):
+        p.apply_async(reconstruction, args=(AGE_RECON[i], depth, dv))
     p.close()
     p.join()
     
