@@ -35,11 +35,13 @@ OUTPUT_PATH = 'Reconstructed_TomographyModel/{}_Dmax{}/'.format(TOMO_MODEL, DMAX
 
 
 def mkdir(path):
+
     if not os.path.exists(path):
         os.mkdir(path)
 
 
 def load_TX2019slab(fname):
+
     file = Dataset(fname)
     depth = file.variables['depth'][:]#22 * 1
     dv = file.variables['dvp'][:]#22*181*361
@@ -47,6 +49,7 @@ def load_TX2019slab(fname):
 
 
 def load_UUP07(fname):
+
     data = []
     f = open(fname,'r')
     temp = []
@@ -67,15 +70,18 @@ def load_UUP07(fname):
                 temp.append(temp1)
     data.append(temp)
     f.close()
-    #resampling data to k*180*360
-    dV = []
-    Depth = []
+
+    # resampling data to k*180*360
+    dv = []
+    depth = []
     for i in range(len(data)):
-        dV_temp1 = []
-        dV_temp2 = []
+
+        dv_temp1 = []
+        dv_temp2 = []
         m = 0
         n = 0
         l = 0
+
         for j in range(len(data[i])):
             n += 1
             if l != 180:
@@ -84,20 +90,20 @@ def load_UUP07(fname):
                     n = 0
                     continue
             if j % 2 == 0:
-                dV_temp1.append(data[i][j][3])
+                dv_temp1.append(data[i][j][3])
                 m += 1
                 if m == 360:
                     l += 1
                     m = 0
-                    dV_temp1.append(data[i][j+1][3])
-                    dV_temp2.append(dV_temp1)
-                    dV_temp1 = []
-        dV_temp2.reverse()
-        dV.append(dV_temp2)
-        Depth.append(data[i][j][2])
-    Depth = np.array(Depth)
-    dV = np.array(dV)
-    return Depth, dV # depth:28 ; dv:28*181*361
+                    dv_temp1.append(data[i][j+1][3])
+                    dv_temp2.append(dv_temp1)
+                    dv_temp1 = []
+        dv_temp2.reverse()
+        dv.append(dv_temp2)
+        depth.append(data[i][j][2])
+    depth = np.array(depth)
+    dv = np.array(dv)
+    return depth, dv # depth:28 ; dv:28*181*361
 
 
 def load_LLNL_G3D_JPS(fname):
@@ -308,7 +314,7 @@ def load_DETOXP3(directory):
 
 def load_GLAD_M25(fname):
     file = Dataset(fname)
-    Depth = file.variables['depth'][30:] # 342 * 1
+    depth = file.variables['depth'][30:] # 342 * 1
     latitude = file.variables['latitude'][:]
     longitude = file.variables['longitude'][:]
     vpv = file.variables['vpv'][30:]
@@ -336,19 +342,19 @@ def load_GLAD_M25(fname):
     y_interp = np.arange(-180, 181, 1)
     X, Y = np.meshgrid(x_interp, y_interp, indexing='ij')
 
-    for i in range(len(Depth)):
+    for i in range(len(depth)):
         interp = RegularGridInterpolator((x,y), dvp_origin[i])
         dv_layer = interp((X, Y))
         dv_interp.append(dv_layer)
 
-    Depth = np.array(Depth)
+    depth = np.array(depth)
     dv_interp = np.array(dv_interp)
     
-    return Depth, dv_interp
+    return depth, dv_interp
 
 
 def read_SubductionZone_coordinate(age):
-    SubductionZone = []
+    subduction_zone = []
     fname = 'Carbon_VolumeDensity_SubductionZone/mean/carbon_volume_density_{}.txt'.format(age)
     with open(fname, 'r') as file:
         file.readline()
@@ -360,12 +366,12 @@ def read_SubductionZone_coordinate(age):
             each_line = each_line.strip()
             each_line = each_line.split()
             temp = (float(each_line[0]), float(each_line[1]))
-            SubductionZone.append(temp)
+            subduction_zone.append(temp)
 
     # delete repeated points
-    SubductionZone = set(SubductionZone)
-    SubductionZone = list(SubductionZone)
-    return SubductionZone
+    subduction_zone = set(subduction_zone)
+    subduction_zone = list(subduction_zone)
+    return subduction_zone
     
 
 def time_depth(age):
@@ -419,80 +425,146 @@ def haversine_distance(depth, lat1, lon1, lat2, lon2):
     a = math.sin(math.radians(delta_lat/2))**2 +\
         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *\
         math.sin(math.radians(delta_lon/2))**2
-    d = 2 * (R-depth) * math.asin(math.sqrt(a))
+    d = 2 * (EARTH_RADIUS - depth) * math.asin(math.sqrt(a))
     
     return d
 
 
-def search_nearest_SubductionZone(depth, latitude, longitude, data): 
-    dis_min = haversine_distance(depth, latitude, longitude, data[0][0], data[0][1])
-    data_min = data[0]
-    for i in range(len(data)):
-        distance = haversine_distance(depth, latitude, longitude, data[i][0], data[i][1])
+def search_nearest_SubductionZone(depth, latitude, longitude, subduction_coord): 
+    """
+        Calculate the distance of the nearest subduction zone.
+        If this distance is less than DMAX (whithin residual model),
+        then mark this point by flag=1
+        
+        Parameters:
+        -----------
+        depth, latitude, longitude: float
+            The location of the point to be calculated. 
+        subduction_coord: ndarray
+            The coordinates of global subduction zones (shape: n*2).
+
+        Returns:
+        --------
+        coordinate : ndarray
+            Coordinate of the nearest subduciton zone.
+        flag: int
+            If 1, positive velocity anomalies whithin the residual model.
+            If 0, positive velocity anomalies whithout the residual model
+    """
+
+    dis_min = float("inf")
+    for i in range(len(subduction_coord)):
+        distance = haversine_distance(
+            depth, latitude, longitude,
+            subduction_coord[i][0], subduction_coord[i][1]
+        )
         if distance <= dis_min:
             dis_min = distance 
-            data_min = data[i]
-    if dis_min < dmax:
+            coordinate = subduction_coord[i]
+
+    if dis_min < DMAX:
         flag = 1
     else:
         flag = 0
-    return data_min, flag
+
+    return coordinate, flag
 
 
 # interpolate velocity anomaly at the given depth
-def interpolation(depth, dV, interpdep, SubductionZone):
-    m, n = interpdep.shape
-    # store the interpolated velocity anomaly values
+def interpolation(depth, dv, interp_dep, subduction_zone):
+    """
+    Interpolate velocity anomaly at the given 2D depth slice
+
+    Parameters:
+    -----------
+    depth: ndarray
+        1-D depth values of original tomography depth-slices.
+    dv: ndarray
+        3-D (ndepth * 181 * 361) dv values of original tomography model.
+    interp_dep: ndarray
+        2-D depth values (181 * 361) required to interpolate in age-slices.
+    subduction_zone: list[float]
+        The coordinates of global subduction zones extracted from plate motion model.
+
+    Returns:
+    --------
+    value : ndarray
+        2-D dv values at interp_dep; Shape: 181 * 361 (-90~90, -180~180)
+    mpv: float
+        Mean positive veolocity (MPV) in this age slice.
+    """
+
+    m, n = interp_dep.shape
+    # store the interpolated dv in residual tomography model
     value = np.zeros((m, n))
+    # store the interpolated dv in original tomography model
     original_value = np.zeros((m, n))
-    for i in range(m):# latitude -90~90°
-        for j in range(n):# Lontitude -180~180°
-            y = [] # store dv of each point
+
+    for i in range(m): # latitude -90~90
+        for j in range(n): # Lontitude -180~180
+            
+            y = [] # store dv along depth direction at each surface point
             for k in range(len(depth)):
-                y.append(dV[k][i][j])
+                y.append(dv[k][i][j])
+            y = np.array(y)
+
             max_depth = depth.max()
             min_depth = depth.min()
-            y = np.array(y)
             f = interp1d(depth, y, kind = 'slinear')
-            if interpdep[i][j] >= min_depth and interpdep[i][j] <= max_depth:
-                value[i][j] = f(interpdep[i][j])
-                original_value[i][j] = f(interpdep[i][j])
-            #else:
-                #print(f'mindepth={min_depth}; maxdepth={max_depth}; interp_depth = {interpdep[i][j]}')
+            if interp_dep[i][j] >= min_depth and interp_dep[i][j] <= max_depth:
+                value[i][j] = f(interp_dep[i][j])
+                original_value[i][j] = f(interp_dep[i][j])
+            # else:
+                # print(f'mindepth={min_depth}; maxdepth={max_depth}; interp_depth = {interpdep[i][j]}')
 
             # get residual tomography model based on subduction zone
-            if interpdep[i][j] < Dep_pro and value[i][j] > 0:
+            if interp_dep[i][j] < DEP_PRO and value[i][j] > 0:
                 latitude = i - 90
                 longitude = j - 180
                 dis_min, flag = search_nearest_SubductionZone(
-                    interpdep[i][j], latitude, longitude, SubductionZone
-                    )
+                    interp_dep[i][j], latitude, longitude,
+                    subduction_zone
+                )
                 if flag == 0:
                     value[i][j] = 0
 
             
     # calculate mean positive veolocity (MPV)
-    MPV = original_value[original_value>0].mean()
+    mpv = original_value[original_value>0].mean()
 
-    return value, MPV # shape: 181 * 361(-90~90, -180~180)
+    return value, mpv
 
 
-def reconstruction(age, Depth, dV):
+def reconstruction(age, depth, dv):
+    """
+    Reconstruct global tomography slice at specific geological age.
+
+    Parameters:
+    -----------
+    age: int 
+        Specific geological age in Ma.
+    depth: ndarray
+        1-D depth values of original tomography depth-slices.
+    dv: ndarray
+        3-D (ndepth * 181 * 361) dv values of original tomography model.
+    """
 
     print('Reconstruction at %d Ma begin!' % age)
 
-    interpdep, depth_mean = time_depth(age)
+    interp_dep, depth_mean = time_depth(age)
     print(f'Mean depth at {age} Ma is {depth_mean} km.')
 
     # read subduction zone coordinate extracted from plate motion model
-    SubductionZone = read_SubductionZone_coordinate(age)
+    subduction_zone = read_SubductionZone_coordinate(age)
 
     # reconstruction 
-    each_dV, MPV = interpolation(Depth, dV, Interpdep, SubductionZone)
+    interp_dv, mpv = interpolation(depth, dv, interp_dep, subduction_zone)
+
     # save reconstructed model to file
-    fname = output_path + '{}_{}.nc'.format(Tomo_model, age)
+    fname = OUTPUT_PATH + '{}_{}.nc'.format(TOMO_MODEL, age)
     lon_grid = np.arange(-180, 181)
     lat_grid = np.arange(-90, 91)
+
     with Dataset(fname, 'w') as file:
         file.createDimension('lon', lon_grid.size)
         file.createDimension('lat', lat_grid.size)
@@ -504,10 +576,10 @@ def reconstruction(age, Depth, dV):
         longitude.units = 'degrees'
         latitude.units = 'degrees'
         
-        data = file.createVariable('z', each_dV.dtype, ('lat', 'lon'), zlib=True)
-        data[:,:] = each_dV
+        data = file.createVariable('z', interp_dv.dtype, ('lat', 'lon'), zlib=True)
+        data[:,:] = interp_dv
         mean_positive_velocity = file.createVariable('MPV', np.float64, ('scalar',))
-        mean_positive_velocity[:] = MPV
+        mean_positive_velocity[:] = mpv
 
     print('The %d Ma completed!' % age)
     
