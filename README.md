@@ -28,10 +28,12 @@ python Calculate_Carbon_SubductionZone.py
 This script converts the carbon area density dataset from Müller et al. (2022) into carbon volume density using the half-space cooling model and extracts carbon density distributions at subduction zones.
 
 Input directory: ./Muller_etal_2019_Tectonics_v2.0_netCDF 
+
                  ./Data_carbon_Muller2022 
+                 
                  ./Muller_etal_2019_PlateMotionModel_v2.0_Tectonics_Updated
 
-Output directory: Carbon_VolumeDensity_SubductionZone
+Output directory: ./Carbon_VolumeDensity_SubductionZone
 
 ---
 
@@ -42,6 +44,10 @@ python Tomography_reconstruction.py
 ```
 
 This script reconstructs the tomography model from the spatial domain into the geological time domain based on slab sinking rates.
+
+Input directory: ./Original_TomographyModel
+
+                 ./Carbon_VolumeDensity_SubductionZone
 
 Output directory: Reconstructed_TomographyModel
 
