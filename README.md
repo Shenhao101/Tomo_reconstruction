@@ -32,7 +32,8 @@ Input directory:
 - `./Data_carbon_Muller2022`
 - `./Muller_etal_2019_PlateMotionModel_v2.0_Tectonics_Updated`
 
-Output directory: ./Carbon_VolumeDensity_SubductionZone
+Output directory: 
+- `./Carbon_VolumeDensity_SubductionZone`
 
 ---
 
@@ -44,11 +45,12 @@ python Tomography_reconstruction.py
 
 This script reconstructs the tomography model from the spatial domain into the geological time domain based on slab sinking rates.
 
-Input directory: ./Original_TomographyModel
+Input directory: 
+- `./Original_TomographyModel`
+- `./Carbon_VolumeDensity_SubductionZone`
 
-                 ./Carbon_VolumeDensity_SubductionZone
-
-Output directory: Reconstructed_TomographyModel
+Output directory: 
+- `./Reconstructed_TomographyModel
 
 ---
 
