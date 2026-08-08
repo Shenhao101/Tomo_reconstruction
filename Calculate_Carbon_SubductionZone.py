@@ -5,6 +5,7 @@ Created on Sun Jan 21 17:42:38 2024
 1. extract the location of past subduction zone from plate motion model
 2. calculate plate thickness at subduction zone
 3. calculate carbonate volume density at subduction zone
+
 @author: shenhao
 @email: shenhao@mail.iggcas.ac.cn
 """
@@ -21,6 +22,30 @@ import multiprocessing
 
 
 def SubductionZone(rotation_model, topology_features, age):
+    """
+    Resolve and refine reconstructed subduction zone geometries at a given age.
+
+    This function resolves topological plate boundaries using a rotation model,
+    extracts all subduction zone boundary segments, and linearly interpolates
+    adjacent points so that the spacing between neighboring points is
+    approximately 1° or less.
+    Parameters
+    ----------
+    rotation_model : pygplates.RotationModel
+        Rotation model used to reconstruct tectonic features.
+    topology_features : list[pygplates.Feature]
+        Topological plate polygon and deforming network features.
+    age : int
+        Reconstruction age in Ma.
+
+    Returns
+    -------
+    subduction_new: list[list[tuple[float, float]]]
+        Refined subduction zone geometries. Each subduction zone is represented
+        as a list of `(latitude, longitude)` coordinate pairs.
+    
+    """
+
     # Resolve our topological plate polygons (and deforming networks) to the current 'time'.
     resolved_topologies = []
     pygplates.resolve_topologies(topology_features, rotation_model, resolved_topologies, age)
@@ -191,7 +216,41 @@ def interpolation(lat_grid, lon_grid, data_grid, subduction):
     return data_subduction
 
 
-def plate_thickness(subduction, agegrid_file, age):
+def plate_thickness(subduction_zones, agegrid_file, age):
+    """
+    Calculate oceanic lithosphere thickness at subduction zones.
+
+    The seafloor age is interpolated from an age grid to the locations of
+    subduction zones. The oceanic lithosphere thickness is then calculated
+    using a half-space cooling model:
+        h = 2 * sqrt(kappa * t) * erfinv((T1 - T0) / (Tm - T0))
+    where "Tm" is the mantle temperature, "T0" is the surface
+    temperature, "T1" is the lithospheric isotherm, "kappa" is the
+    thermal diffusivity, and "t" is the seafloor age.
+
+    Parameters
+    ----------
+    subduction_zones : list[list[tuple[float, float]]]
+        Subduction zone geometries represented as lists of
+        `(latitude, longitude)` coordinate pairs.
+    agegrid_file : str
+        Seafloor age grid filename. 
+    age : int
+        Reconstruction age in Ma.
+
+    Returns
+    -------
+    age_subduction : list[list[float]]
+        Seafloor ages interpolated at the subduction zone locations.
+
+    thickness_subduction : list[list[float]]
+        Oceanic lithosphere thickness at the subduction zone locations,
+        in km. The thickness is constrained between 10 and 125 km.
+
+    where ``Tm`` is the mantle temperature, ``T0`` is the surface
+    temperature, ``T1`` is the lithospheric isotherm, ``kappa`` is the
+    thermal diffusivity, and ``t`` is the seafloor age.
+    """
 
     # seafloor age grid
     fname = agegrid_file.format(age)
@@ -212,12 +271,13 @@ def plate_thickness(subduction, agegrid_file, age):
     cutoff2 = 125.0
     
     # interpolate seafloor age at subduction zone, unit: Myr
-    age_subduction = interpolation(lat_grid, lon_grid, age_grid, subduction)
+    age_subduction = interpolation(lat_grid, lon_grid, age_grid, subduction_zones)
     
     # calculate oceanic lithosphere thickness at subduction zone
     factor = special.erfinv((T1-T0)/(Tm-T0)) * 2 * math.sqrt(kappa)
     Myr2sec=1e6*365*24*60*60
     thickness_subduction = []
+
     for i in range(len(age_subduction)):
         thickness_subduction_each = []
         for j in range(len(age_subduction[i])):
@@ -228,17 +288,44 @@ def plate_thickness(subduction, agegrid_file, age):
                 thickness = cutoff1
             thickness_subduction_each.append(thickness)
         thickness_subduction.append(thickness_subduction_each)
+
     return age_subduction, thickness_subduction
     
     
-def carbon_volume_density(subduction, grid_file, thickness_subduction, age):
+def carbon_volume_density(subduction_zones, grid_file, thickness_subduction, age):
+    """
+    Calculate carbon volume density at subduction zones.
+
+    The carbon area density is interpolated from a gridded carbon-density
+    model to the locations of subduction zones. The interpolated carbon
+    area density is then converted to carbon volume density using the
+    oceanic lithosphere thickness.
+
+    Parameters
+    ----------
+    subduction_ZONES : list[list[tuple[float, float]]]
+        Subduction zone geometries represented as lists of
+        `(latitude, longitude)` coordinate pairs.
+    grid_file : str
+        Carbon-density grid filename.
+    thickness_subduction : list[list[float]]
+        Oceanic lithosphere thickness at the subduction zone locations.
+    age : int
+        Reconstruction age in Ma.
+
+    Returns
+    -------
+    carbon_subduction : list[list[float]]
+        Carbon volume density at the subduction zone locations, in Mt C/km^3.
+    """
+     
     fname = grid_file.format(age)
     file = Dataset(fname)
     lon_grid = file.variables['x'][:]
     lat_grid = file.variables['y'][:]
     carbon_grid = file.variables['z'][:] # unit: Mt C/m^2
     carbon_grid = carbon_grid.filled(np.nan) 
-    carbon_subduction = interpolation(lat_grid, lon_grid, carbon_grid, subduction)
+    carbon_subduction = interpolation(lat_grid, lon_grid, carbon_grid, subduction_zones)
     
     for i in range(len(carbon_subduction)):
         for j in range(len(carbon_subduction[i])):
@@ -249,7 +336,7 @@ def carbon_volume_density(subduction, grid_file, thickness_subduction, age):
     return carbon_subduction
     
 
-def carbon_volume_desity_lithosphere(subduction, grid_file, thickness_subduction, age):
+def carbon_volume_desity_lithosphere(subduction_zones, grid_file, thickness_subduction, age):
     fname = grid_file.format(age)
     file = Dataset(fname)
     lon_grid = file.variables['x'][:]
@@ -262,7 +349,7 @@ def carbon_volume_desity_lithosphere(subduction, grid_file, thickness_subduction
             if carbon_grid[i][j] > 1e-4:
                 carbon_grid[i][j] = np.nan
 
-    carbon_subduction = interpolation(lat_grid, lon_grid, carbon_grid, subduction)
+    carbon_subduction = interpolation(lat_grid, lon_grid, carbon_grid, subduction_zones)
     
     for i in range(len(carbon_subduction)):
         for j in range(len(carbon_subduction[i])):
@@ -273,7 +360,7 @@ def carbon_volume_desity_lithosphere(subduction, grid_file, thickness_subduction
     return carbon_subduction
 
 
-def save_to_txt(fname, subduction, age, thickness, lithosphere, serpentinite, crust, sediment, total):
+def save_to_txt(fname, subduction_zones, age, thickness, lithosphere, serpentinite, crust, sediment, total):
     with open(fname, 'w') as file:
         # write header
         string = 'Latitude'  + ' ' * 4 # length: 12
@@ -296,20 +383,20 @@ def save_to_txt(fname, subduction, age, thickness, lithosphere, serpentinite, cr
         file.write(string + '\n')
         
         # write data
-        for i in range(len(subduction)):
+        for i in range(len(subduction_zones)):
             header = '='*20 + 'Subduction_Zone_{}'.format(i) + '='*20
             file.write(header + '\n')
-            for j in range(len(subduction[i])):
+            for j in range(len(subduction_zones[i])):
                 # mark the anomaly value at some points
                 # especially in the mediterranean region, there are several points 
                 # with extremly young seafloor age but very high sediment carbon
                 if total[i][j] > 10:
                     file.write('*')
 
-                string = '%.2f' % subduction[i][j][0]
+                string = '%.2f' % subduction_zones[i][j][0]
                 file.write(string + ' '*(12 - len(string)))
 
-                string = '%.2f' % subduction[i][j][1]
+                string = '%.2f' % subduction_zones[i][j][1]
                 file.write(string + ' '*(13 - len(string)))
                 
                 string = '%.2f' % age[i][j]
@@ -333,41 +420,44 @@ def save_to_txt(fname, subduction, age, thickness, lithosphere, serpentinite, cr
                 string = '%f' % total[i][j]
                 file.write(string + ' '*(25 - len(string)))
                 file.write('\n')
+
     
-def calculate_carbon_subduction(age, subduction, output_path):
+def calculate_carbon_subduction(age, subduction_zones, output_path):
+
     print('Working at %s Ma' % age)
 
     # step2: calculate plate thickness at subduction zone
     agegrid_file = 'Muller_etal_2019_Tectonics_v2.0_netCDF/Muller_etal_2019_Tectonics_v2.0_AgeGrid-{}.nc'# seafloor Agegrid files
-    age_subduction, thickness_subduction = plate_thickness(subduction, agegrid_file, age)
+    age_subduction, thickness_subduction = plate_thickness(subduction_zones, agegrid_file, age)
 
     # step3: calculate carbonate volume density at subduction zone
 
     # carbon in the lithosphere
     lithosphere_file = 'Data_carbon_Muller2022/Lithosphere/mean/carbon_lithosphere_grid_{}.nc'
     lithosphere_carbon_subduction = carbon_volume_desity_lithosphere(
-        subduction, lithosphere_file, thickness_subduction, age
+        subduction_zones, lithosphere_file, thickness_subduction, age
     )
     # carbon in the serpentinite
     serpentinite_file = 'Data_carbon_Muller2022/Serpentinite/mean/carbon_serpentinite_grid_{}.nc'
     serpentinite_carbon_subduction = carbon_volume_density(
-        subduction, serpentinite_file, thickness_subduction, age
+        subduction_zones, serpentinite_file, thickness_subduction, age
     )
 
     # carbon in the crust
     crust_file = 'Data_carbon_Muller2022/Crust/mean/carbon_crust_grid_{}.nc'
     crust_carbon_subduction = carbon_volume_density(
-        subduction, crust_file, thickness_subduction, age
+        subduction_zones, crust_file, thickness_subduction, age
     )
 
     # carbon in the sediment
     sediment_file = 'Data_carbon_Muller2022/Sediment/mean/carbon_sediment_grid_{}.nc'
     sediment_carbon_subduction = carbon_volume_density(
-        subduction, sediment_file, thickness_subduction, age
+        subduction_zones, sediment_file, thickness_subduction, age
     )
+
     # total carbon
     total_carbon_subduction = []
-    for i in range(len(subduction)):
+    for i in range(len(subduction_zones)):
         total_carbon_subduction_each = lithosphere_carbon_subduction[i] +\
                                        serpentinite_carbon_subduction[i] +\
                                        crust_carbon_subduction[i] +\
@@ -377,7 +467,7 @@ def calculate_carbon_subduction(age, subduction, output_path):
     # step4: save to file
     output_file = output_path + 'carbon_volume_density_{}.txt'.format(age)
     save_to_txt(
-        output_file, subduction, age_subduction, thickness_subduction,
+        output_file, subduction_zones, age_subduction, thickness_subduction,
         lithosphere_carbon_subduction, serpentinite_carbon_subduction,
         crust_carbon_subduction, sediment_carbon_subduction, total_carbon_subduction
     )
@@ -399,13 +489,14 @@ def test_plot(z):
 
 
 if __name__=='__main__':
+
     # load plate motion model
     use_local_files = True
-    # download plate reconstruction data
     if not use_local_files:
+        # download plate reconstruction data
         gdownload = gplately.download.DataServer("Muller2019")
         rotation_model, topology_features, static_polygons = gdownload.get_plate_reconstruction_files()
-    #loading local files
+    
     if use_local_files:
         input_directory = "./Muller_etal_2019_PlateMotionModel_v2.0_Tectonics_Updated/"
         
@@ -423,19 +514,21 @@ if __name__=='__main__':
             else:
                 topology_filenames.remove(topology_filename)
     
-    
     output_path = 'Carbon_VolumeDensity_SubductionZone/mean/'
     mkdir(output_path)
 
 
-    # calculate the carbon at subduction zone 
+    # calculate the carbon density at subduction zone 
     Cores = multiprocessing.cpu_count()
     p = multiprocessing.Pool(processes=Cores)
     reconstruction_age = np.arange(0, 100)
     for age in reconstruction_age:
+
         # step1: extract the location of past subduction zone from plate motion model
-        subduction = SubductionZone(rotation_model, topology_features, age)
-        p.apply_async(calculate_carbon_subduction, args=(age, subduction, output_path))
+        subduction_zones = SubductionZone(rotation_model, topology_features, age)
+
+        p.apply_async(calculate_carbon_subduction, args=(age, subduction_zones, output_path))
+
     p.close()
     p.join()
 
