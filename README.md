@@ -50,7 +50,7 @@ Input directory:
 - `./Carbon_VolumeDensity_SubductionZone`
 
 Output directory: 
-- `./Reconstructed_TomographyModel
+- `./Reconstructed_TomographyModel`
 
 ---
 
