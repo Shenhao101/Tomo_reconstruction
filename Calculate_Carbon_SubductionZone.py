@@ -9,6 +9,7 @@ Created on Sun Jan 21 17:42:38 2024
 @author: shenhao
 @email: shenhao@mail.iggcas.ac.cn
 """
+import os
 import glob
 import math
 import numpy as np
@@ -474,10 +475,9 @@ def calculate_carbon_subduction(age, subduction_zones, output_path):
     print('%s Ma has finished.'%age)
 
 
-import os
 def mkdir(path):
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path)
 
 
 def test_plot(z):
@@ -521,7 +521,7 @@ if __name__=='__main__':
     # calculate the carbon density at subduction zone 
     Cores = multiprocessing.cpu_count()
     p = multiprocessing.Pool(processes=Cores)
-    reconstruction_age = np.arange(0, 100)
+    reconstruction_age = np.arange(0, 101)
     for age in reconstruction_age:
 
         # step1: extract the location of past subduction zone from plate motion model

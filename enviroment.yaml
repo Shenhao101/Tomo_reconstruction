@@ -1,0 +1,9 @@
+name: carbon_flux
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - gplately
+  - pykrige
+  - openpyxl
+prefix: /home/hao/miniconda3/envs/carbon_flux

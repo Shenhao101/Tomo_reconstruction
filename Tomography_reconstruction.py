@@ -28,16 +28,16 @@ TOMO_MODEL = 'TX2019slab'
 # reconstructed age period
 AGE_RECON = np.arange(1, 101)
 # The maximum distance between points in the tomography model and subduction zone above 410km
-DMAX = 150
+DMAX = 200
 # processing depth of the residual tomography model
 DEP_PRO = 410
 OUTPUT_PATH = 'Reconstructed_TomographyModel/{}_Dmax{}/'.format(TOMO_MODEL, DMAX)
 
-
+print(OUTPUT_PATH)
 def mkdir(path):
 
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path)
 
 
 def load_TX2019slab(fname):
@@ -397,6 +397,7 @@ def time_depth(age):
     # calculate the time needed for the slab to sink into the lower mantle
     subducted_depth = 0
     time_upper = 0
+    
     for j in range(age):
         temp = subducted_depth + upper_rate[str(age-j)]
         if temp <= 410:

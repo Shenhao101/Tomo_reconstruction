@@ -14,7 +14,10 @@ from pykrige.ok import OrdinaryKriging
 
 def upper_mantle():
     # load time-dependent subduction rate 
-    subduction_data = pd.read_excel('shallow_vertical_rate.xlsx', engine='openpyxl')
+    try:
+        subduction_data = pd.read_excel('shallow_vertical_rate.xlsx', engine='openpyxl')
+    except Exception as e:
+        print(e)
     Age = subduction_data['Age']
     rate_mean = subduction_data['Subduction rate mean (cm/yr)']
 
