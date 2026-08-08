@@ -19,7 +19,20 @@ conda activate pygplates_py310
 ```
 
 ## Workflow
-### 1. Time-domain reconstruction of tomography models
+### 1. Calculate carbon volume density at subduction zones
+
+```bash
+python Calculate_Carbon_SubductionZone.py
+```
+
+This script converts the carbon area density dataset from Müller et al. (2022) into carbon volume density using the half-space cooling model and extracts carbon density distributions at subduction zones.
+
+Input directory: ./Muller_etal_2019_Tectonics_v2.0_netCDF ./Data_carbon_Muller2022
+Output directory: Carbon_VolumeDensity_SubductionZone
+
+---
+
+### 2. Time-domain reconstruction of tomography models
 
 ```bash
 python Tomography_reconstruction.py
@@ -28,18 +41,6 @@ python Tomography_reconstruction.py
 This script reconstructs the tomography model from the spatial domain into the geological time domain based on slab sinking rates.
 
 Output directory: Reconstructed_TomographyModel
-
----
-
-### 2. Calculate carbon volume density at subduction zones
-
-```bash
-python Calculate_Carbon_SubductionZone.py
-```
-
-This script converts the carbon area density dataset from Müller et al. (2022) into carbon volume density using the half-space cooling model and extracts carbon density distributions at subduction zones.
-
-Output directory: Carbon_VolumeDensity_SubductionZone
 
 ---
 
