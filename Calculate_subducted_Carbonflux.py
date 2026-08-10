@@ -2,6 +2,8 @@
 """
 Created on Tue Jan 30 19:25:08 2024
 
+Calculating the global carbon flux subducted into the mantle throughout geological time.
+
 @author: m1335
 """
 from netCDF4 import Dataset
@@ -11,10 +13,11 @@ import getRate
 import multiprocessing
 import os
 
+
 # parameters
-R = 6371
+EARTH_RADIUS = 6371
 # optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
-model = 'GLAD_M25'
+MODEL = 'GLAD_M25'
 version = 'Dmax200'
 limit = 'mean'
 Dis_max = 1000 # maximum distance between positive anomaly and subduction zone
@@ -64,7 +67,7 @@ def haversine_distance(depth, lat1, lon1, lat2, lon2):
     a = math.sin(math.radians(delta_lat/2))**2 +\
         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *\
         math.sin(math.radians(delta_lon/2))**2
-    d = 2 * (R-depth) * math.asin(math.sqrt(a))
+    d = 2 * (EARTH_RADIUS - depth) * math.asin(math.sqrt(a))
     
     return d
 
@@ -180,7 +183,7 @@ def calculate_flux(age, dv_limit):
                 
                 # calculate slab area
                 # scale the distance according to the depth and latitude at each point 
-                lat_d = (2 * math.pi * (R-Interpdep[i][j])) / 360 
+                lat_d = (2 * math.pi * (EARTH_RADIUS - Interpdep[i][j])) / 360 
                 lon_d = lat_d * math.cos(math.radians(i-90))
                 area = lat_d * lon_d
 
