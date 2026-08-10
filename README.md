@@ -27,6 +27,7 @@ conda create -n pygplates_py310 python=3.10
 conda activate pygplates_py310
 conda install -c conda-forge gplately
 ```
+**Note:** The installation of gplately may be stuck at the *"Solving environment"* stage for several minutes (sometimes around 10 minutes) due to its complex dependencies. If the installation still cannot be completed, please try using **micromamba** instead. For details, please refer to the official GPlately installation guide (https://gplates.github.io/gplately/latest/sphinx/html/installation.html).
 
 ## Workflow
 ### 1. Calculate carbon volume density at subduction zones
