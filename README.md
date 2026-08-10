@@ -26,7 +26,7 @@ For example:
 conda create -n pygplates_py310 python=3.10
 conda activate pygplates_py310
 conda install -c conda-forge gplately
-```bash
+```
 
 ## Workflow
 ### 1. Calculate carbon volume density at subduction zones
