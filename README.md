@@ -17,6 +17,16 @@ conda env create -f environment.yml
 ```bash
 conda activate pygplates_py310
 ```
+### Caveat
+
+If creating the environment using “environment.yml” fails, we recommend manually creating a new Conda environment and installing gplately first, followed by the remaining packages listed in “environment.yml”.
+
+For example:
+```bash
+conda create -n pygplates_py310 python=3.10
+conda activate pygplates_py310
+conda install -c conda-forge gplately
+```bash
 
 ## Workflow
 ### 1. Calculate carbon volume density at subduction zones
