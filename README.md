@@ -76,6 +76,7 @@ This script calculates the global carbon flux subducted into the mantle througho
 Input directory: 
 - `./Reconstructed_TomographyModel`
 - `./Carbon_VolumeDensity_SubductionZone`
+
 Output directory:
 - `./Carbon_flux`
 
