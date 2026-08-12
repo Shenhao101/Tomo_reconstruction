@@ -2,6 +2,7 @@
 """
 Created on Tue Jan 30 19:25:08 2024
 
+Calculating subducted carbon flux along the longitude throughout geological time.
 @author: m1335
 """
 from netCDF4 import Dataset
@@ -12,16 +13,15 @@ import multiprocessing
 import os
 
 # parameters
-R = 6371
+EARTH_RADIUS = 6371
 # optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
-model = 'TX2019slab'
-version = 'Dmax200'
-limit = 'min'
-Dis_max = 800 # maximum distance between positive anomaly and subduction zone
-output_path = 'Carbon_flux/Dismax{}_{}_{}_newrate_longitude'.format(Dis_max, version, limit)
-
-upper_rate = getRate.upper_mantle() # dict shape: age_length * 1
-lower_rate = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
+MODEL = 'TX2019slab'
+VERSION = 'Dmax200'
+LIMIT = 'min' # Selection of the carbon flux limit: mean, min, max
+DIS_SUB = 800 # maximum distance between positive anomaly and subduction zone
+OUTPUT_PATH = 'Carbon_flux/Dismax{}_{}_{}_newrate_longitude'.format(DIS_SUB, VERSION, LIMIT)
+UPPER_RATE = getRate.upper_mantle() # dict shape: age_length * 1
+LOWER_RATE = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
 
 
 
@@ -31,16 +31,16 @@ def mkdir(path):
 
 
 def read_reconstructed_tomography(age):
-    fname = 'Reconstructed_TomographyModel/{}_{}_newrate/{}_{}.nc'.format(model, version, model, age)
+    fname = 'Reconstructed_TomographyModel/{}_{}_newrate/{}_{}.nc'.format(MODEL, VERSION, MODEL, age)
     file = Dataset(fname)
-    dV = file.variables['z'][:]
+    dv = file.variables['z'][:]
     # read mean positive velocity (MPV)
-    MPV = file.variables['MPV'][:]
-    return dV, MPV[0]
+    mpv = file.variables['MPV'][:]
+    return dv, mpv[0]
 
 
-def read_SubductionZone_data(age):
-    SubductionZone_data = []
+def read_subduction_zone_data(age):
+    subduction_zone_data = []
     fname = 'Carbon_VolumeDensity_SubductionZone/mean/carbon_volume_density_{}.txt'.format(age)
     with open(fname, 'r') as file:
         file.readline()
@@ -53,8 +53,8 @@ def read_SubductionZone_data(age):
             each_line = each_line.split()
             for i in range(len(each_line)):
                 each_line[i] = float(each_line[i])
-            SubductionZone_data.append(each_line)
-    return SubductionZone_data
+            subduction_zone_data.append(each_line)
+    return subduction_zone_data
                 
 
 def haversine_distance(depth, lat1, lon1, lat2, lon2):
@@ -64,41 +64,76 @@ def haversine_distance(depth, lat1, lon1, lat2, lon2):
     a = math.sin(math.radians(delta_lat/2))**2 +\
         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *\
         math.sin(math.radians(delta_lon/2))**2
-    d = 2 * (R-depth) * math.asin(math.sqrt(a))
+    d = 2 * (EARTH_RADIUS - depth) * math.asin(math.sqrt(a))
     
     return d
 
 
 def time_depth(age):
+    """
+    calculating corresponding depth of subducted slabs at specific age.
 
-    # calculate the time needed to sink into the lower mantle
+    Parameters:
+    -----------
+    age: int
+        Geological age in Ma.
+    
+    Returns:
+    --------
+    depth : ndarray
+        2D array of global slab depths (km).
+    depth_mean: float
+        Mean depth (km).
+    """
+
+    # calculate the time needed for the slab to sink into the lower mantle
     subducted_depth = 0
-    time = 0
+    time_upper = 0
+    
     for j in range(age):
-        temp = subducted_depth + upper_rate[str(age-j)]
+        temp = subducted_depth + UPPER_RATE[str(age-j)]
         if temp <= 410:
             flag = False 
             subducted_depth = temp
-            time += 1
+            time_upper += 1
         else:
             flag = True
             break
-    
-    time += (410-subducted_depth) / upper_rate[str(age-j)]
+    time_upper += (410-subducted_depth) / UPPER_RATE[str(age-j)]
     
     # calculate slab depth at specified age 
     if flag == False: # slab in the upper mantle
-        depth = np.full(lower_rate.shape, subducted_depth)
+        depth = np.full(LOWER_RATE.shape, subducted_depth)
     else: # slab in the lower mantle
-        depth = 410 + (age - time) * lower_rate
+        depth = 410 + (age - time_upper) * LOWER_RATE
 
-    depth_mean = np.average(depth, axis=None, weights=None)
     return depth
 
 
 
-def search_nearest_SubductionZone(depth, latitude, longitude, data): 
+def search_nearest_subduction_zone(depth, latitude, longitude, data): 
+    """
+    Find the nearest subduction-zone point to a given location.
 
+    Parameters
+    ----------
+    depth : float
+        Depth of the target point, in km.
+    latitude : float
+        Latitude of the target point, in degrees.
+    longitude : float
+        Longitude of the target point, in degrees.
+    data : list
+        List of subduction-zone carbon data.
+
+    Returns
+    -------
+    data_min : list
+        The nearest subduction-zone point to the target location.
+    flag : int (0 or 1)
+        Flag indicating whether the nearest point satisfies the
+        specified distance criterion.
+    """
 
     dis_min = haversine_distance(depth, latitude, longitude, data[0][0], data[0][1])
     data_min = data[0]
@@ -107,46 +142,46 @@ def search_nearest_SubductionZone(depth, latitude, longitude, data):
         if distance <= dis_min:
             dis_min = distance 
             data_min = data[i]
-    if dis_min < Dis_max:
+    if dis_min < DIS_SUB:
         flag = 1
     else:
-        flag = 1
+        flag = 0
 
     return data_min, flag
     
 
 def calculate_flux(age, dv_limit):
     # read reconstructed tomography model
-    dV, MPV = read_reconstructed_tomography(age)
+    dv, mpv = read_reconstructed_tomography(age)
     if age == 1:
-        Interpdep_last = np.zeros((181, 361))
+        interp_dep_last = np.zeros((181, 361))
     else:
-        Interpdep_last = time_depth(age-1)
-    Interpdep = time_depth(age)
+        interp_dep_last = time_depth(age-1)
+    interp_dep = time_depth(age)
 
     # read subduction zone carbon data 
-    SubductionZone_data = read_SubductionZone_data(age)
+    subduction_zone_data = read_subduction_zone_data(age)
 
     # # calculate velocity anomaly limit that define the slab
     # # using the MPV(mean positive velocity) (Shephard et al., 2017)
-    if limit == 'mean':
-        dv_slab = MPV
+    if LIMIT == 'mean':
+        dv_slab = mpv
 
     # lower limit of the flux    
-    elif limit == 'min':
-        if Interpdep.mean() < 410:
+    elif LIMIT == 'min':
+        if interp_dep.mean() < 410:
             dv_slab = dv_limit[0]
         else:
             dv_slab = dv_limit[2]
 
     # upper limit of the flux
-    elif limit == 'max':
-        if Interpdep.mean() < 410:
+    elif LIMIT == 'max':
+        if interp_dep.mean() < 410:
             dv_slab = dv_limit[1]
         else:
             dv_slab = dv_limit[3]
     
-    print('Working at %s Ma. MPV= %s. dv_slab= %s'% (age, MPV, dv_slab))
+    print('Working at %s Ma. MPV= %s. dv_slab= %s'% (age, mpv, dv_slab))
     
     slab_flux = np.zeros(361)
     # lithosphere_carbon_flux = np.zoros(361)
@@ -156,14 +191,14 @@ def calculate_flux(age, dv_limit):
     total_carbon_flux = np.zeros(361)
     for i in range(181):
         for j in range(361):
-            if dV[i][j] > dv_slab:
+            if dv[i][j] > dv_slab:
                 
                 # search for the nearest subduction zone 
                 latitude = i - 90
                 longitude = j - 180
 
-                SubductionZone_nearest_data, flag = search_nearest_SubductionZone(
-                    Interpdep[i][j], latitude, longitude, SubductionZone_data
+                SubductionZone_nearest_data, flag = search_nearest_subduction_zone(
+                    interp_dep[i][j], latitude, longitude, subduction_zone_data
                 )
                 if flag == 0:
                     # the distance between positive anomaly and subduction zone exceed the cutoff
@@ -171,16 +206,16 @@ def calculate_flux(age, dv_limit):
                 
                 # calculate slab area
                 # scale the distance according to the depth and latitude at each point 
-                lat_d = (2 * math.pi * (R-Interpdep[i][j])) / 360 
+                lat_d = (2 * math.pi * (EARTH_RADIUS - interp_dep[i][j])) / 360 
                 lon_d = lat_d * math.cos(math.radians(i-90))
                 area = lat_d * lon_d
 
                 
                 # calculate slab volume
-                if Interpdep_last[i][j] < 410 and Interpdep[i][j] > 410:
-                    delta_dep = lower_rate[i][j]
+                if interp_dep_last[i][j] < 410 and interp_dep[i][j] > 410:
+                    delta_dep = LOWER_RATE[i][j]
                 else:
-                    delta_dep = Interpdep[i][j] - Interpdep_last[i][j]
+                    delta_dep = interp_dep[i][j] - interp_dep_last[i][j]
                 volume = area * delta_dep
                 # convert km^3/Myr to km^3/yr
                 volume *= 1e-6 
@@ -200,41 +235,41 @@ if __name__ == '__main__':
 
     reconstruction_age = np.arange(1, 101)
 
-    # calculate dv slab for the upper limit and lower limit
-    MPV_max_upper_mantle = 0
-    MPV_min_upper_mantle = 999
-    MPV_max_lower_mantle = 0
-    MPV_min_lower_mantle = 999
+    # Calculate the upper limit and lower limit of dv slab
+    mpv_max_upper_mantle = -float('inf')
+    mpv_min_upper_mantle = float('inf')
+    mpv_max_lower_mantle = -float('inf')
+    mpv_min_lower_mantle = float('inf')
 
     for age in range(1,66):
-        Interpdep = time_depth(age)
-        dv, MPV = read_reconstructed_tomography(age)
-        if Interpdep.mean() < 410:
-            if MPV < MPV_min_upper_mantle:
-                MPV_min_upper_mantle = MPV
-            if MPV > MPV_max_upper_mantle:
-                MPV_max_upper_mantle = MPV
+        interp_dep = time_depth(age)
+        dv, mpv = read_reconstructed_tomography(age)
+        if interp_dep.mean() < 410:
+            if mpv < mpv_min_upper_mantle:
+                mpv_min_upper_mantle = mpv
+            if mpv > mpv_max_upper_mantle:
+                mpv_max_upper_mantle = mpv
         else:
-            if MPV < MPV_min_lower_mantle:
-                MPV_min_lower_mantle = MPV
-            if MPV > MPV_max_lower_mantle:
-                MPV_max_lower_mantle = MPV
+            if mpv < mpv_min_lower_mantle:
+                mpv_min_lower_mantle = mpv
+            if mpv > mpv_max_lower_mantle:
+                mpv_max_lower_mantle = mpv
 
-    if model == 'MITP08':
-        MPV_max_upper_mantle = 0
+    if MODEL == 'MITP08':
+        mpv_max_upper_mantle = 0
         for age in range(2,10):
-            Interpdep = time_depth(age)
-            dv, MPV = read_reconstructed_tomography(age)
-            if Interpdep.mean() < 410:
-                if MPV > MPV_max_upper_mantle:
-                    MPV_max_upper_mantle = MPV
+            interp_dep = time_depth(age)
+            dv, mpv = read_reconstructed_tomography(age)
+            if interp_dep.mean() < 410:
+                if mpv > mpv_max_upper_mantle:
+                    mpv_max_upper_mantle = mpv
 
-    dv_limit = [MPV_max_upper_mantle, MPV_min_upper_mantle, MPV_max_lower_mantle, MPV_min_lower_mantle]
+    dv_limit = [mpv_max_upper_mantle, mpv_min_upper_mantle, mpv_max_lower_mantle, mpv_min_lower_mantle]
 
 
     results = []
-    Cores = multiprocessing.cpu_count()
-    p = multiprocessing.Pool(processes=Cores)
+    cores = multiprocessing.cpu_count()
+    p = multiprocessing.Pool(processes=cores)
     for age in reconstruction_age:
         results.append(p.apply_async(calculate_flux, args=(age, dv_limit)))
     p.close()
@@ -256,6 +291,6 @@ if __name__ == '__main__':
             slab_flux[i][j] = all_flux_data[i][1][j]
             carbon_flux[i][j] = all_flux_data[i][2][j]
 
-    mkdir(output_path)
-    fname = '{}/flux_{}.npz'.format(output_path, model)
+    mkdir(OUTPUT_PATH)
+    fname = '{}/flux_{}.npz'.format(OUTPUT_PATH, MODEL)
     np.savez(fname, array1=slab_flux, array2=carbon_flux)
