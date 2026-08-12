@@ -90,7 +90,12 @@ python Calculate_subducted_Carbonflux_longitude.py
 
 This script calculates the longitudinal distribution of subducted carbon flux to investigate spatial variations in carbon recycling.
 
-Output directory: Carbon_flux
+Input directory: 
+- `./Reconstructed_TomographyModel`
+- `./Carbon_VolumeDensity_SubductionZone`
+
+Output directory:
+- `./Carbon_flux`
 
 ### 5. Long-term tectonic carbon cycle model
 ```bash
