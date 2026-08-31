@@ -12,18 +12,21 @@ import numpy as np
 import getRate
 import multiprocessing
 import os
+import pandas as pd
+from scipy.interpolate import interp1d
 
 
 # parameters
 EARTH_RADIUS = 6371
 # optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
-MODEL = 'UU-P07'
+MODEL = 'LLNL_G3D_JPS'
 VERSION = 'Dmax200'
 LIMIT = 'min' # Selection of the carbon flux limit: mean, min, max
 DIS_SUB= 800 # maximum distance between positive anomaly and subduction zone
-OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}_newrate'.format(DIS_SUB, VERSION, LIMIT)
+OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}_correction'.format(DIS_SUB, VERSION, LIMIT)
 UPPER_RATE = getRate.upper_mantle() # dict shape: age_length * 1
 LOWER_RATE = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
+COMPRRESSION_CORRECTION = True
 
 
 def mkdir(path):
@@ -57,6 +60,20 @@ def read_subduction_zone_data(age):
             subduction_zone_data.append(each_line)
     return subduction_zone_data
                 
+
+def read_ak135(file):
+    depth = []
+    density = []
+    subduction_data = pd.read_excel(file, engine='openpyxl')
+    with open(file, 'r') as f:
+        f.readline()
+        for line in f.readlines():
+            line = line.strip().split()
+            depth.append(float(line[0]))
+            density.append(float(line[1]))
+
+    return np.array(depth), np.array(density)
+
 
 def haversine_distance(depth, lat1, lon1, lat2, lon2):
     delta_lat = lat1 - lat2
@@ -181,7 +198,24 @@ def calculate_flux(age, dv_limit):
             dv_slab = dv_limit[3]
     
     print('Working at %s Ma. MPV= %s. dv_slab= %s'% (age, mpv, dv_slab))
-    
+
+
+    if COMPRRESSION_CORRECTION == True:
+
+        ak135_model = pd.read_excel('AK135_density.xlsx', engine='openpyxl')
+        ak135_depth = ak135_model['Depth(km)'].astype(float)
+        ak135_density = ak135_model['Rho(kg/m^3)'].astype(float)
+        density_func = interp1d(
+            ak135_depth,
+            ak135_density,
+            kind='linear',
+        )
+
+        # Using density at 120 km as the reference of subducted oceanic lithosphere
+        # exclude the effect from crust or sediment in the shallow depth
+        density_ref = 3.371
+
+
     slab_flux = 0
     lithosphere_carbon_flux = 0
     serpentinite_carbon_flux = 0
@@ -215,6 +249,12 @@ def calculate_flux(age, dv_limit):
                 lon_d = lat_d * math.cos(math.radians(i-90))
                 area = lat_d * lon_d
 
+                # 1D self-compression correction using AK135 model (van der meer et al., 2014)
+                if COMPRRESSION_CORRECTION == True:
+                    if interp_dep[i][j] > 120:
+                        density_dep = density_func(interp_dep[i][j])
+                        compression_factor = density_dep / density_ref
+                        area *= compression_factor**(2 / 3) # isotropic compression assumption
                 
                 # calculate slab volume
                 if interp_dep_last[i][j] < 410 and interp_dep[i][j] > 410:
@@ -222,6 +262,7 @@ def calculate_flux(age, dv_limit):
                 else:
                     delta_dep = interp_dep[i][j] - interp_dep_last[i][j]
                 volume = area * delta_dep
+
                 # convert km^3/Myr to km^3/yr
                 volume *= 1e-6 
                 slab_flux += volume 
