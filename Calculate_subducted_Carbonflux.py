@@ -199,7 +199,6 @@ def calculate_flux(age, dv_limit):
     
     print('Working at %s Ma. MPV= %s. dv_slab= %s'% (age, mpv, dv_slab))
 
-
     if COMPRRESSION_CORRECTION == True:
 
         ak135_model = pd.read_excel('AK135_density.xlsx', engine='openpyxl')
@@ -214,7 +213,6 @@ def calculate_flux(age, dv_limit):
         # Using density at 120 km as the reference of subducted oceanic lithosphere
         # exclude the effect from crust or sediment in the shallow depth
         density_ref = 3.371
-
 
     slab_flux = 0
     lithosphere_carbon_flux = 0
