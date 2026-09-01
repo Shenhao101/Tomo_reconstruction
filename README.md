@@ -97,11 +97,30 @@ Input directory:
 Output directory:
 - `./Carbon_flux`
 
-### 5. Long-term tectonic carbon cycle model
+---
+
+### 5. Statistic of slab and carbon flux 
+```bash
+python generate_carbon_mean.py
+```
+
+This script calculates the mean and limits of the fluxes from five tomography models.
+
+Input directory: 
+- `./Carbon_flux`
+
+Output file:
+- `subducted_carbon.csv`
+
+---
+
+### 6. Long-term tectonic carbon cycle model
 ```bash
 python ./Linear_regression/regression.py
 ```
 This script establishes a tectonic forcing model through least-squares fitting to proxy-based CO2 records.
+
+---
 
 ## Reference
 If you use these codes in your own research, please cite the following papers:
