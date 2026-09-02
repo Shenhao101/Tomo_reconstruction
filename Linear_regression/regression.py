@@ -24,41 +24,12 @@ import matplotlib.pyplot as plt
 def load_carbon_flux(file):
     df = pd.read_csv(file)
     age = np.array(df['# time'][0:65])
-    carbon_flux = np.array(df['total_subducted_mean  (Mt C/yr)'][0:65])
+    carbon_flux = np.array(df['total_carbon_flux_mean (Mt C/yr)'][0:65])
 
     # Normalization relative to the present value
     carbon_flux_normalized = carbon_flux / carbon_flux[0]
     
     return age, carbon_flux_normalized
-
-
-
-def load_Sr_isotope(file):
-    Age_Sr = []
-    Sr_ratio = []
-    with open(file, 'r') as f:
-        for eachline in f.readlines():
-            eachline = eachline.strip('\n')
-            eachline = eachline.split()
-            Age_Sr.append(float(eachline[0]))
-            Sr_ratio.append(float(eachline[1]))
-    
-    Age_Sr = np.array(Age_Sr)
-    Sr_ratio = np.array(Sr_ratio)
-
-# =============================================================================
-#     # standardization
-#     mean = np.mean(Sr_ratio)
-#     std = np.std(Sr_ratio) # Standard Deviation
-#     Sr_ratio_standardization = (Sr_ratio - mean) / std
-# =============================================================================
-    
-    # nomalization
-    Sr_max = Sr_ratio.max()
-    Sr_min = Sr_ratio.min()
-    Sr_ratio_normalization = (Sr_ratio-Sr_min) / (Sr_max-Sr_min)
-    return Age_Sr, Sr_ratio_normalization
-
 
 
 def load_Li_isotope(file):
@@ -106,37 +77,6 @@ def load_Li_isotope(file):
     return age_interp, Li_normalization
 
 
-
-def load_Or_isotope(file):
-    f = open(file, 'r')
-    f.readline()
-    age = []
-    Or_isotope = []
-    
-    for each_line in f.readlines():
-        each_line = each_line.strip().split()
-        age.append(float(each_line[0]))
-        Or_isotope.append(float(each_line[1]))
-    
-    age = np.array(age)
-    Or_isotope = np.array(Or_isotope)
-    
-# =============================================================================
-#     # standardization
-#     mean = np.mean(Or_isotope)
-#     std = np.std(Or_isotope) # Standard Deviation
-#     Or_standardization = (Or_isotope - mean) / std
-# =============================================================================
-    
-    # nomalization
-    Or_max = Or_isotope.max()
-    Or_min = Or_isotope.min()
-    Or_normalization = (Or_isotope-Or_min) / (Or_max-Or_min)
-    
-    return age, Or_normalization
-
-
-
 def load_CO2(file):
     f = open(file, 'r', encoding=u'utf-8', errors='ignore')
     reader = csv.reader(f)
@@ -167,31 +107,6 @@ def load_CO2(file):
 
 
     return age_interp, CO2_normalization, R_fs
-
-
-
-def load_temperature(file):
-    f = open(file, 'r')
-    age = []
-    temperature = []
-    for each_line in f.readlines():
-        each_line = each_line.strip('\n')
-        each_line = each_line.split()
-        age.append(float(each_line[0]))
-        temperature.append(float(each_line[1]))
-    age = np.array(age)
-    temperature = np.array(temperature)
-    
-    age_interp = np.arange(1,66)
-    f = interpolate.interp1d(age, temperature, kind='cubic')
-    temp_interp = f(age_interp)
-    
-    # normalization
-    temp_max = temp_interp.max()
-    temp_min = temp_interp.min()
-    temp_normalization = (temp_interp-temp_min) / (temp_max-temp_min)
-    return age_interp, temp_normalization
-
 
 
 def cosine_taper(freqs, flimit):
@@ -246,27 +161,32 @@ if __name__ == '__main__':
     age_flux, carbon_flux_mean = load_carbon_flux(file)
 
     
-# =============================================================================
-#     # load Sr isotope
-#     Age_Sr, Sr_ratio = load_Sr_isotope('Sr_ratio_fit.txt')
-# =============================================================================
+
     # load Li isotope
     file = 'Li_isotope.xlsx'
     age_Li, Li_isotope = load_Li_isotope(file)
-# =============================================================================
-#     # load Or isotope
-#     file = 'Or_isotope.csv'
-#     Age_Or, Or_isotope = load_Or_isotope(file)
-# =============================================================================
     
     # load CO2
     file = 'CO2_CenCO2PIP_2023.csv'
     age_CO2, CO2, R_fs = load_CO2(file)
 
+    
 # =============================================================================
-#     # load temperature 
-#     file = 'temperature_smooth_Hansen2013.txt' 
-#     Age_CO2, CO2 = load_temperature(file)
+    # # curve fitting
+    # def func(t, a, b, c):        
+    #     F_carbon = np.interp(t, age_flux, carbon_flux_mean)
+    #     w_carbon = np.interp(t, age_flux, carbon_flux_mean)
+    #     F_weathering = np.interp(t, age_Li, Li_isotope)
+        
+    #     return a*F_carbon + b*w_carbon*F_weathering + c
+ 
+    # popt, pcov = curve_fit(func, age_CO2, CO2)
+
+    # a_opt, b_opt, c_opt = popt
+    # print(f'a={a_opt};b={b_opt};c={c_opt}')
+    # pCO2_pred = func(age_CO2, a_opt, b_opt, c_opt)
+    # corr_coef, p_value = pearsonr(CO2, pCO2_pred)
+    # print(f'correlation coefficient = {corr_coef}; p value = {p_value}\n')
 # =============================================================================
     
 
@@ -294,14 +214,17 @@ if __name__ == '__main__':
     #         f.write(str(age_CO2[i]) + '\t')
     #         f.write('{:.4f}'.format(pCO2_pred[i]) + '\n')
 # =============================================================================
-     
-    
+
 # =============================================================================
-    # curve fitting
     def func(t, a, b, c):        
         F_carbon = np.interp(t, age_flux, carbon_flux_mean)
-        w_carbon = np.interp(t, age_flux, carbon_flux_mean)
         F_weathering = np.interp(t, age_Li, Li_isotope)
+
+        # curve fitting with weight feedback strength (Caves et al., 2016)
+        # w_carbon = np.interp(t, age_flux, R_fs)
+
+        # curve fitting with constant weight 1
+        w_carbon = 1
         
         return a*F_carbon + b*w_carbon*F_weathering + c
  
@@ -314,138 +237,112 @@ if __name__ == '__main__':
     print(f'correlation coefficient = {corr_coef}; p value = {p_value}\n')
 # =============================================================================
     
-
-    
-    # def func(t, a, b, c):        
-    #     F_carbon = np.interp(t, age_flux, carbon_flux_mean)
-    #     F_weathering = np.interp(t, age_Li, Li_isotope)
-
-    #     # curve fitting with weight feedback strength (Caves et al., 2016)
-    #     w_carbon = np.interp(t, age_flux, R_fs)
-
-    #     # # curve fitting with constant weight 1
-    #     # w_carbon = 1
-        
-    #     return a*F_carbon + b*w_carbon*F_weathering + c
- 
-    # popt, pcov = curve_fit(func, age_CO2, CO2)
-
-    # a_opt, b_opt, c_opt = popt
-    # print(f'a={a_opt};b={b_opt};c={c_opt}')
-    # pCO2_pred = func(age_CO2, a_opt, b_opt, c_opt)
-    # corr_coef, p_value = pearsonr(CO2, pCO2_pred)
-    # print(f'correlation coefficient = {corr_coef}; p value = {p_value}\n')
-    
-    
-# =============================================================================
     # 95% confidence interval
     # Generate parameter samples from the fitted covariance matrix
     param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
     # Calculate model predictions for each parameter sample.
     y_samples = np.array([func(age_CO2, *p) for p in param_samples])
     y_lower, y_upper = np.percentile(y_samples, [2.5, 97.5], axis=0)
+  
+
+# =============================================================================
+    corr_coef_slide, p_value_slide, Age_slide = slide_correlation(age_CO2, CO2, pCO2_pred, 16, plot=True)
+    
+    # output slide window coefficient
+    with open('correlation_coefficient_window.txt', 'w') as f:
+        f.write('window width = 16\n')
+        for i in range(len(Age_slide)):
+            f.write(str(Age_slide[i]) + '\t')
+            f.write('{:.4f}'.format(corr_coef_slide[i]) + '\t')
+            f.write('{:f}'.format(p_value_slide[i]) + '\n')
 # =============================================================================
     
 
 # =============================================================================
-    # corr_coef_slide, p_value_slide, Age_slide = slide_correlation(age_CO2, CO2, pCO2_pred, 16, plot=True)
+    # multi stage curve fitting
+    # stag3: 1-20 Ma
+    # stag2: 16-54 Ma
+    # stag1: 54-65 Ma
     
-    # # output slide window coefficient
-    # with open('correlation_coefficient_window.txt', 'w') as f:
-    #     f.write('window width = 16\n')
-    #     for i in range(len(Age_slide)):
-    #         f.write(str(Age_slide[i]) + '\t')
-    #         f.write('{:.4f}'.format(corr_coef_slide[i]) + '\t')
-    #         f.write('{:f}'.format(p_value_slide[i]) + '\n')
-# =============================================================================
-    
-
-
-# =============================================================================
-    # # multi stage curve fitting
-    # # stag1: 1-20 Ma
-    # # stag2: 16-54 Ma
-    # # stag3: 54-65 Ma
-    
-    # # Stage 1 fitting
-    # def func(t, a, b, c):        
-    #     F_carbon = np.interp(t, age_flux[0:20], carbon_flux_mean[0:20])
-    #     w_carbon = np.interp(t, age_flux[0:20], carbon_flux_mean[0:20])
-    #     F_weathering = np.interp(t, age_Li[0:20], Li_isotope[0:20])
+    # Stage 3 fitting
+    def func(t, a, b, c):        
+        F_carbon = np.interp(t, age_flux[0:20], carbon_flux_mean[0:20])
+        w_carbon = np.interp(t, age_flux[0:20], carbon_flux_mean[0:20])
+        F_weathering = np.interp(t, age_Li[0:20], Li_isotope[0:20])
         
-    #     return a*F_carbon + b*w_carbon*F_weathering + c
+        return a*F_carbon + b*w_carbon*F_weathering + c
  
-    # popt, pcov = curve_fit(func, age_CO2[0:20], CO2[0:20])
-    # a_opt1, b_opt1, c_opt1 = popt
-    # print(f'Stage1: a={a_opt1}; b={b_opt1}; c={c_opt1}\n')
+    popt, pcov = curve_fit(func, age_CO2[0:20], CO2[0:20])
+    a_opt3, b_opt3, c_opt3 = popt
+    print(f'Stage1: a={a_opt3}; b={b_opt3}; c={c_opt3}\n')
     
-    # pCO2_pred_stage1 = func(age_CO2[0:20], a_opt1, b_opt1, c_opt1)    
-    # corr_coef1, p_value1 = pearsonr(CO2[0:20], pCO2_pred_stage1)
-    # print(f'Stage1: correlation coefficient = {corr_coef1}; p value = {p_value1}\n')
+    pCO2_pred_stage3 = func(age_CO2[0:20], a_opt3, b_opt3, c_opt3)    
+    corr_coef3, p_value3 = pearsonr(CO2[0:20], pCO2_pred_stage3)
+    print(f'Stage3: correlation coefficient = {corr_coef3}; p value = {p_value3}\n')
     
-    # # 95% credible interval
-    # param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
-    # y_samples = np.array([func(age_CO2[0:20], *p) for p in param_samples])
-    # y1_lower, y1_upper = np.percentile(y_samples, [2.5, 97.5], axis=0)
+    # 95% credible interval
+    param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
+    y_samples = np.array([func(age_CO2[0:20], *p) for p in param_samples])
+    y3_lower, y3_upper = np.percentile(y_samples, [2.5, 97.5], axis=0)
     
     
-    # # Stage 2 fitting
-    # def func(t, a, b, c):        
-    #     F_carbon = np.interp(t, age_flux[20:52], carbon_flux_mean[20:52])
-    #     w_carbon = np.interp(t, age_flux[20:52], carbon_flux_mean[20:52])
-    #     F_weathering = np.interp(t, age_Li[20:52], Li_isotope[20:52])
+    # Stage 2 fitting
+    def func(t, a, b, c):        
+        F_carbon = np.interp(t, age_flux[20:52], carbon_flux_mean[20:52])
+        w_carbon = np.interp(t, age_flux[20:52], carbon_flux_mean[20:52])
+        F_weathering = np.interp(t, age_Li[20:52], Li_isotope[20:52])
         
-    #     return a*F_carbon + b*w_carbon*F_weathering + c
+        return a*F_carbon + b*w_carbon*F_weathering + c
  
-    # popt, pcov = curve_fit(func, age_CO2[20:52], CO2[20:52])
-    # a_opt2, b_opt2, c_opt2 = popt
-    # print(f'Stage2: a={a_opt2}; b={b_opt2}; c={c_opt2}\n')
+    popt, pcov = curve_fit(func, age_CO2[20:52], CO2[20:52])
+    a_opt2, b_opt2, c_opt2 = popt
+    print(f'Stage2: a={a_opt2}; b={b_opt2}; c={c_opt2}\n')
     
-    # pCO2_pred_stage2 = func(age_CO2[20:52], a_opt2, b_opt2, c_opt2)    
-    # corr_coef2, p_value2 = pearsonr(CO2[20:52], pCO2_pred_stage2)
-    # print(f'Stage2: correlation coefficient = {corr_coef2}; p value = {p_value2}\n')
+    pCO2_pred_stage2 = func(age_CO2[20:52], a_opt2, b_opt2, c_opt2)    
+    corr_coef2, p_value2 = pearsonr(CO2[20:52], pCO2_pred_stage2)
+    print(f'Stage2: correlation coefficient = {corr_coef2}; p value = {p_value2}\n')
     
-    # param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
-    # y_samples = np.array([func(age_CO2[20:52], *p) for p in param_samples])
-    # y2_lower, y2_upper = np.percentile(y_samples, [2.5, 97.5], axis=0)
+    param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
+    y_samples = np.array([func(age_CO2[20:52], *p) for p in param_samples])
+    y2_lower, y2_upper = np.percentile(y_samples, [2.5, 97.5], axis=0)
     
     
-    # # Stage 3 fitting
-    # def func(t, a, b, c):        
-    #     F_carbon = np.interp(t, age_flux[52:], carbon_flux_mean[52:])
-    #     w_carbon = np.interp(t, age_flux[52:], carbon_flux_mean[52:])
-    #     F_weathering = np.interp(t, age_Li[52:], Li_isotope[52:])
+    # Stage 1 fitting
+    def func(t, a, b, c):        
+        F_carbon = np.interp(t, age_flux[52:], carbon_flux_mean[52:])
+        w_carbon = np.interp(t, age_flux[52:], carbon_flux_mean[52:])
+        F_weathering = np.interp(t, age_Li[52:], Li_isotope[52:])
         
-    #     return a*F_carbon + b*w_carbon*F_weathering + c
+        return a*F_carbon + b*w_carbon*F_weathering + c
  
-    # popt, pcov = curve_fit(func, age_CO2[52:], CO2[52:])
-    # a_opt3, b_opt3, c_opt3 = popt
-    # print(f'Stage3: a={a_opt3}; b={b_opt3}; c={c_opt3}\n')
+    popt, pcov = curve_fit(func, age_CO2[52:], CO2[52:])
+    a_opt1, b_opt1, c_opt1 = popt
+    print(f'Stage1: a={a_opt1}; b={b_opt1}; c={c_opt1}\n')
     
-    # pCO2_pred_stage3 = func(age_CO2[52:], a_opt3, b_opt3, c_opt3)    
-    # corr_coef3, p_value3 = pearsonr(CO2[52:], pCO2_pred_stage3)
-    # print(f'Stage3: correlation coefficient = {corr_coef3}; p value = {p_value3}\n')
+    pCO2_pred_stage1 = func(age_CO2[52:], a_opt1, b_opt1, c_opt1)    
+    corr_coef1, p_value1 = pearsonr(CO2[52:], pCO2_pred_stage1)
+    print(f'Stage1: correlation coefficient = {corr_coef1}; p value = {p_value1}\n')
     
-    # param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
-    # y_samples = np.array([func(age_CO2[52:], *p) for p in param_samples])
-    # y3_lower, y3_upper = np.percentile(y_samples, [2.5, 97.5], axis=0)
+    param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
+    y_samples = np.array([func(age_CO2[52:], *p) for p in param_samples])
+    y1_lower, y1_upper = np.percentile(y_samples, [2.5, 97.5], axis=0)
     
     
-    # # output multi-stage fitting curve
-    # pCO2_pred_mul = np.concatenate((pCO2_pred_stage1, pCO2_pred_stage2, pCO2_pred_stage3))
-    # pCO2_pred_lower = np.concatenate((y1_lower, y2_lower, y3_lower))
-    # pCO2_pred_upper = np.concatenate((y1_upper, y2_upper, y3_upper))
-    # corr_coef_mul, p_value_mul = pearsonr(CO2, pCO2_pred_mul)
-    # with open('fitting_curve_multi_stage.txt', 'w') as f:
-    #     f.write(f'stage 1: a={a_opt3};b={b_opt3}\tc={c_opt3}\tcorrelation coefficient={corr_coef3}\tp value={p_value3}\n')
-    #     f.write(f'stage 2: a={a_opt2};b={b_opt2}\tc={c_opt2}\tcorrelation coefficient={corr_coef2}\tp value={p_value2}\n')
-    #     f.write(f'stage 3: a={a_opt1};b={b_opt1}\tc={c_opt1}\tcorrelation coefficient={corr_coef1}\tp value={p_value1}\n')
-    #     f.write(f'multi-stage: correlation coefficient={corr_coef_mul}\tp value={p_value_mul}\n')
-    #     for i in range(len(age_CO2)):
-    #         f.write(str(age_CO2[i]) + '\t')
-    #         f.write('{:.4f}'.format(pCO2_pred_mul[i]) + '\t')
-    #         f.write('{:.4f}'.format(pCO2_pred_lower[i]) + '\t')
-    #         f.write('{:.4f}'.format(pCO2_pred_upper[i]) + '\n')
+    # output multi-stage fitting curve
+    pCO2_pred_mul = np.concatenate((pCO2_pred_stage3, pCO2_pred_stage2, pCO2_pred_stage1))
+    pCO2_pred_lower = np.concatenate((y3_lower, y2_lower, y1_lower))
+    pCO2_pred_upper = np.concatenate((y3_upper, y2_upper, y1_upper))
+    corr_coef_mul, p_value_mul = pearsonr(CO2, pCO2_pred_mul)
+    with open('fitting_curve_multi_stage.txt', 'w') as f:
+        f.write(f'stage 1: a={a_opt1};b={b_opt1}\tc={c_opt1}\tcorrelation coefficient={corr_coef1}\tp value={p_value1}\n')
+        f.write(f'stage 2: a={a_opt2};b={b_opt2}\tc={c_opt2}\tcorrelation coefficient={corr_coef2}\tp value={p_value2}\n')
+        f.write(f'stage 3: a={a_opt3};b={b_opt3}\tc={c_opt3}\tcorrelation coefficient={corr_coef3}\tp value={p_value3}\n')
+        f.write(f'multi-stage: correlation coefficient={corr_coef_mul}\tp value={p_value_mul}\n')
+        for i in range(len(age_CO2)):
+            f.write(str(age_CO2[i]) + '\t')
+            f.write('{:.4f}'.format(pCO2_pred_mul[i]) + '\t')
+            f.write('{:.4f}'.format(pCO2_pred_lower[i]) + '\t')
+            f.write('{:.4f}'.format(pCO2_pred_upper[i]) + '\n')
  
     # plt.plot(age_CO2[0:20], pCO2_pred_stage1, label='Stage1', linestyle='-.')
     # plt.plot(age_CO2[20:52], pCO2_pred_stage2, label='Stage2', linestyle='-.')
@@ -454,20 +351,18 @@ if __name__ == '__main__':
 # =============================================================================
     
 
-    plt.plot(age_CO2, CO2,  c='k', linestyle='-', label='Observed')
-    plt.plot(age_CO2, pCO2_pred, label='original', linestyle='--')
-    #plt.plot(Age_CO2, pCO2_pred_mul, label='original', linestyle='--')
-    plt.show()
+    # plt.plot(age_CO2, CO2,  c='k', linestyle='-', label='Observed')
+    # plt.plot(age_CO2, pCO2_pred, label='original', linestyle='--')
+    # plt.plot(Age_CO2, pCO2_pred_mul, label='original', linestyle='--')
+    # plt.show()
     
-    with open('fitting_curve_wCO2.txt', 'w') as f:
+    with open('fitting_curve.txt', 'w') as f:
         f.write(f'a={a_opt};b={b_opt};c={c_opt};correlation coefficient={corr_coef};p value={p_value}\n')
         for i in range(len(age_CO2)):
             f.write(str(age_CO2[i]) + '\t')
-            f.write('{:.4f}'.format(pCO2_pred[i]) + '\n')
-# # =============================================================================
-#             f.write('{:.4f}'.format(y_lower[i]) + '\t')
-#             f.write('{:.4f}'.format(y_upper[i]) + '\n')
-# # =============================================================================
+            f.write('{:.4f}'.format(pCO2_pred[i]) + '\t')
+            f.write('{:.4f}'.format(y_lower[i]) + '\t')
+            f.write('{:.4f}'.format(y_upper[i]) + '\n')
             
 
         
