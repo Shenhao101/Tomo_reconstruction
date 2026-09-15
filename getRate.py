@@ -61,6 +61,12 @@ def lower_mantle():
         # calculat slab sinking rate in the lower mantle 
         lower_rate = (Depth[i]-410) / (Age[i] - time)
         rate.append(lower_rate)
+
+
+    # add lower-mantle sinking rate as a new column
+    slab_data['Lower mantle rate (mm/yr)'] = rate
+    slab_data.to_excel('Lower_mantle_rate.xlsx', index=False)
+
     
     # add background mean sinking rate 1.2 cm/yr at coarse grid 
     x = np.arange(-180, 181, 30)
@@ -97,6 +103,9 @@ def lower_mantle():
     new_rate, ss = OK.execute('grid', x, y)
      
     return new_rate 
+
+if __name__ == '__main__':
+    low_mantle_rate = lower_mantle()
 
 
     
