@@ -71,7 +71,7 @@ def lower_mantle():
     # add background mean sinking rate 1.2 cm/yr at coarse grid 
     x = np.arange(-180, 181, 30)
     y = np.arange(-90, 91, 30)
-    rate_mean = 12
+    rate_mean = 15
     cutoff = 30
     Lon_coarse = []
     Lat_coarse = []

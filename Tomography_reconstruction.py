@@ -23,8 +23,8 @@ import multiprocessing
 
 # reconstruction parameters
 EARTH_RADIUS = 6371
-# optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, DETOX-P3, GLAD_M25
-TOMO_MODEL = 'TX2019slab'
+# optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
+TOMO_MODEL = 'UU-P07'
 # reconstructed age period
 AGE_RECON = np.arange(1, 101)
 # The maximum distance between points in the tomography model and subduction zone above 410km
@@ -618,11 +618,9 @@ if __name__ == '__main__':
     # reconstruction 
     mkdir(OUTPUT_PATH)
     Cores = multiprocessing.cpu_count()
-    p = multiprocessing.Pool(processes=Cores)
+    p = multiprocessing.Pool(processes=Cores-2)
     for i in range(len(AGE_RECON)):
         p.apply_async(reconstruction, args=(AGE_RECON[i], depth, dv))
     p.close()
     p.join()
-    
-
 

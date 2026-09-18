@@ -58,7 +58,7 @@ carbon_flux_reservoirs_mean = 0
 model_num = 0 # the number of non-zoer values in models 
 
 for i in range(len(models)):
-    file = './Carbon_flux/Dis_sub1000_Dmax200_mean_correction/flux_{}.txt'.format(models[i])
+    file = './Carbon_flux/Dis_sub1000_Dmax200_mean/flux_{}.txt'.format(models[i])
     age_flux, slab_flux, carbon_flux, carbon_flux_reservoirs = load_carbon_flux(file)
 
     # delete outliers at 1 Ma for models MIT-P08 and TX2019slab
@@ -91,7 +91,7 @@ carbon_flux_reservoirs_max = 0
 model_num = 0 # the number of non-zoer values in models 
 
 for i in range(len(models)):
-    file = './Carbon_flux/Dis_sub1200_Dmax200_max_correction/flux_{}.txt'.format(models[i])
+    file = './Carbon_flux/Dis_sub1200_Dmax200_max/flux_{}.txt'.format(models[i])
     age_flux, slab_flux, carbon_flux, carbon_flux_reservoirs = load_carbon_flux(file)
 
     # delete outliers at 1 Ma for models MIT-P08 and TX2019slab
@@ -124,7 +124,7 @@ carbon_flux_reservoirs_min = 0
 model_num = 0 # the number of non-zoer values in models 
 
 for i in range(len(models)):
-    file = './Carbon_flux/Dis_sub800_Dmax200_min_correction/flux_{}.txt'.format(models[i])
+    file = './Carbon_flux/Dis_sub800_Dmax200_min/flux_{}.txt'.format(models[i])
     Age_flux, slab_flux, carbon_flux, carbon_flux_reservoirs = load_carbon_flux(file)
 
     # delete outliers at 1 Ma for models MIT-P08 and TX2019slab
@@ -172,4 +172,4 @@ data['crust_sediment_flux_mean (Mt C/yr)'] = carbon_flux_sediment_mean[0:65]
 data['crust_sediment_flux_max (Mt C/yr)'] = carbon_flux_sediment_max[0:65]
 data['crust_sediment_flux_min (Mt C/yr)'] = carbon_flux_sediment_min[0:65]
 df = pd.DataFrame(data)
-df.to_csv('subducted_carbon.csv', index=False)
+df.to_csv('subducted_carbon_new.csv', index=False)

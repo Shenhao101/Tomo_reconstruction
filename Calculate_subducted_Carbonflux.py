@@ -19,11 +19,11 @@ from scipy.interpolate import interp1d
 # parameters
 EARTH_RADIUS = 6371
 # optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
-MODEL = 'LLNL_G3D_JPS'
+MODEL = 'GLAD_M25'
 VERSION = 'Dmax200'
-LIMIT = 'min' # Selection of the carbon flux limit: mean, min, max
-DIS_SUB= 800 # maximum distance between positive anomaly and subduction zone
-OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}_correction'.format(DIS_SUB, VERSION, LIMIT)
+LIMIT = 'max' # Selection of the carbon flux limit: mean, min, max
+DIS_SUB= 1200 # maximum distance between positive anomaly and subduction zone
+OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}'.format(DIS_SUB, VERSION, LIMIT)
 UPPER_RATE = getRate.upper_mantle() # dict shape: age_length * 1
 LOWER_RATE = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
 COMPRRESSION_CORRECTION = True
@@ -35,7 +35,7 @@ def mkdir(path):
 
 
 def read_reconstructed_tomography(age):
-    fname = 'Reconstructed_TomographyModel/{}_{}_newrate/{}_{}.nc'.format(MODEL, VERSION, MODEL, age)
+    fname = 'Reconstructed_TomographyModel/{}_{}/{}_{}.nc'.format(MODEL, VERSION, MODEL, age)
     file = Dataset(fname)
     dV = file.variables['z'][:]
     # read mean positive velocity (MPV)
