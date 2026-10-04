@@ -128,6 +128,26 @@ def load_CO2(file):
     return age_interp, CO2_normalization, R_fs
 
 
+def load_temperature(file):
+    f = open(file, 'r')
+    age = []
+    temperature = []
+    for each_line in f.readlines():
+        each_line = each_line.strip('\n')
+        each_line = each_line.split()
+        age.append(float(each_line[0]))
+        temperature.append(float(each_line[1]))
+    age = np.array(age)
+    temperature = np.array(temperature)
+
+    age_interp = np.arange(1,66)
+    f = interpolate.interp1d(age, temperature)
+    temperature_interp = f(age_interp)
+
+    temperature_normalization = temperature_interp / temperature_interp[0]
+    return age_interp, temperature_normalization
+
+
 def cosine_taper(freqs, flimit):
     fl1, fl2 = flimit
     taper = np.zeros_like(freqs)
@@ -187,22 +207,29 @@ if __name__ == '__main__':
     file = 'CO2_CenCO2PIP_2023.csv'
     age_CO2, CO2, R_fs = load_CO2(file)
 
-    # load carbon flux in indivisual tomography model 
-    # 'TX2019slab', 'UU-P07', 'MITP08', 'LLNL_G3D_JPS', 'GLAD_M25'
-    model = 'GLAD_M25'
-    file = f'../Carbon_flux/Dis_sub1000_Dmax200_mean_correction/flux_{model}.txt'
-    age_flux, carbon_flux_model = load_carbon_flux_model(file)
+    # load temperature
+    file = 'temperature_smooth_Hansen2013.txt'
+    age_t, temperature = load_temperature(file)
+    Berner_data =  pd.read_csv('GEOCARB_input_arrays_tMod.csv')
+    age_data = Berner_data['age']
+    RUN = Berner_data['RT']
+
+    # # load carbon flux in indivisual tomography model 
+    # # 'TX2019slab', 'UU-P07', 'MITP08', 'LLNL_G3D_JPS', 'GLAD_M25'
+    # model = 'GLAD_M25'
+    # file = f'../Carbon_flux/Dis_sub1000_Dmax200_mean_correction/flux_{model}.txt'
+    # age_flux, carbon_flux_model = load_carbon_flux_model(file)
 
     
 # =============================================================================
     # curve fitting
     def func(t, a, b, c):        
 
-        # F_carbon = np.interp(t, age_flux, carbon_flux_mean)
-        # w_carbon = np.interp(t, age_flux, carbon_flux_mean)
+        F_carbon = np.interp(t, age_flux, carbon_flux_mean)
+        w_carbon = np.interp(t, age_flux, carbon_flux_mean)
 
-        F_carbon = np.interp(t, age_flux, carbon_flux_model)
-        w_carbon = np.interp(t, age_flux, carbon_flux_model)
+        # F_carbon = np.interp(t, age_flux, carbon_flux_model)
+        # w_carbon = np.interp(t, age_flux, carbon_flux_model)
         F_weathering = np.interp(t, age_Li, Li_isotope)
         
         return a*F_carbon + b*w_carbon*F_weathering + c
@@ -264,7 +291,37 @@ if __name__ == '__main__':
     # corr_coef, p_value = pearsonr(CO2, pCO2_pred)
     # print(f'correlation coefficient = {corr_coef}; p value = {p_value}\n')
 # =============================================================================
+
+# =============================================================================
+    # # curve fitting (assume dCO2/dt=0)
+    # def func(t, gamma, FERT):
+
+    #     Fsub = np.interp(t, age_flux, carbon_flux_mean)
+    #     FLi = np.interp(t, age_Li, Li_isotope)
+
+    #     ACT = 0.09
+    #     Ftem = np.interp(t, age_t, temperature)
+    #     FRUN = np.interp(t, age_data, RUN)
+    #     F_t = np.exp(ACT * (Ftem - Ftem[0])) * (1 + FRUN * (Ftem - Ftem[0])) ** 0.65
+
+    #     w = gamma * Fsub / (FLi * F_t)
+    #     x = w ** (1 / FERT)
+    #     # x = np.clip(x, 1e-10, 1 - 1e-10)
+
+    #     pCO2 = x / (2 - x)
+
+    #     return pCO2
+
+    # popt, pcov = curve_fit(func, age_CO2, CO2)
+
+    # gamma_opt, FERT_opt= popt
+    # pCO2_pred = func(age_CO2, gamma_opt, FERT_opt)
+    # corr_coef, p_value = pearsonr(CO2, pCO2_pred)
+    # print(f'correlation coefficient = {corr_coef}; p value = {p_value}\n')
+    # print(f'gamma_opt = {gamma_opt}; FERT_opt = {FERT_opt}\n')
+# =============================================================================
     
+
     # 95% confidence interval
     # Generate parameter samples from the fitted covariance matrix
     param_samples = np.random.multivariate_normal(popt, pcov, size=1000)
@@ -379,13 +436,14 @@ if __name__ == '__main__':
 # =============================================================================
     
 
-    # plt.plot(age_CO2, CO2,  c='k', linestyle='-', label='Observed')
-    # plt.plot(age_CO2, pCO2_pred, label='original', linestyle='--')
+    plt.plot(age_CO2, CO2,  c='k', linestyle='-', label='Observed')
+    plt.plot(age_CO2, pCO2_pred, label='original', linestyle='--')
     # plt.plot(Age_CO2, pCO2_pred_mul, label='original', linestyle='--')
-    # plt.show()
+    plt.show()
     
-    with open('fitting_curve.txt', 'w') as f:
-        f.write(f'a={a_opt};b={b_opt};c={c_opt};correlation coefficient={corr_coef};p value={p_value}\n')
+    with open('fitting_curve_fert.txt', 'w') as f:
+        # f.write(f'a={a_opt};b={b_opt};c={c_opt};correlation coefficient={corr_coef};p value={p_value}\n')
+        f.write(f'a={a_opt};b={b_opt};correlation coefficient={corr_coef};p value={p_value}\n')
         for i in range(len(age_CO2)):
             f.write(str(age_CO2[i]) + '\t')
             f.write('{:.4f}'.format(pCO2_pred[i]) + '\t')
