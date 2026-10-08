@@ -36,7 +36,7 @@ conda install -c conda-forge gplately
 python Calculate_Carbon_SubductionZone.py
 ```
 
-This script converts the carbon area density dataset from Müller et al. (2022) into carbon volume density using the half-space cooling model and extracts carbon density distributions at subduction zones.
+This script calculates the tectonic parameters at global subduction zones in the geological time, including carbon area density dataset from Müller et al. (2022), plate thickness calculated using the half-space cooling model and age-grid of oceanic plate.
 
 Input directory:
 - `./Muller_etal_2019_Tectonics_v2.0_netCDF`
