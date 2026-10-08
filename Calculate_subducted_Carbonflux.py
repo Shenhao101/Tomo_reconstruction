@@ -19,10 +19,10 @@ from scipy.interpolate import interp1d
 # parameters
 EARTH_RADIUS = 6371
 # optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
-MODEL = 'GLAD_M25'
+MODEL = 'TX2019slab'
 VERSION = 'Dmax200'
-LIMIT = 'max' # Selection of the carbon flux limit: mean, min, max
-DIS_SUB= 1200 # maximum distance between positive anomaly and subduction zone
+LIMIT = 'min' # Selection of the carbon flux limit: mean, min, max
+DIS_SUB= 800 # maximum distance between positive anomaly and subduction zone
 OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}'.format(DIS_SUB, VERSION, LIMIT)
 UPPER_RATE = getRate.upper_mantle() # dict shape: age_length * 1
 LOWER_RATE = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
@@ -263,14 +263,15 @@ def calculate_flux(age, dv_limit):
 
                 # convert km^3/Myr to km^3/yr
                 volume *= 1e-6 
-                slab_flux += volume 
+                area_flux = volume / subduction_zone_nearest_data[3]
+                slab_flux += area_flux 
                 
                 #calculate carbon flux, unit: Mt/yr
-                lithosphere_carbon_flux += volume * subduction_zone_nearest_data[4]
-                serpentinite_carbon_flux += volume * subduction_zone_nearest_data[5]
-                crust_carbon_flux += volume * subduction_zone_nearest_data[6]
-                sediment_carbon_flux += volume * subduction_zone_nearest_data[7]
-                total_carbon_flux += volume * subduction_zone_nearest_data[8]
+                lithosphere_carbon_flux += area_flux * subduction_zone_nearest_data[4]
+                serpentinite_carbon_flux += area_flux * subduction_zone_nearest_data[5]
+                crust_carbon_flux += area_flux * subduction_zone_nearest_data[6]
+                sediment_carbon_flux += area_flux * subduction_zone_nearest_data[7]
+                total_carbon_flux += area_flux * subduction_zone_nearest_data[8]
     flux = [age, slab_flux, lithosphere_carbon_flux, serpentinite_carbon_flux,
             crust_carbon_flux, sediment_carbon_flux, total_carbon_flux] 
     print('%s Ma has finished.'%age)
@@ -336,7 +337,7 @@ if __name__ == '__main__':
         # write header
         string = 'Age(Ma)'  + ' ' * 4 # length: 11
         file.write(string)
-        string = 'Slab_Flux(km^3/yr)'  + ' ' * 4 # length: 22
+        string = 'Slab_Flux(km^2/yr)'  + ' ' * 4 # length: 22
         file.write(string)
         string = 'Lithosphere_Carbon_Flux(Mt/yr)'  + ' ' * 4 # length: 34
         file.write(string)

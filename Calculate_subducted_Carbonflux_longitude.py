@@ -17,11 +17,11 @@ from scipy.interpolate import interp1d
 # parameters
 EARTH_RADIUS = 6371
 # optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
-MODEL = 'GLAD_M25'
+MODEL = 'TX2019slab'
 VERSION = 'Dmax200'
-LIMIT = 'max' # Selection of the carbon flux limit: mean, min, max
-DIS_SUB = 1200 # maximum distance between positive anomaly and subduction zone
-OUTPUT_PATH = 'Carbon_flux/Dismax{}_{}_{}_correction_longitude'.format(DIS_SUB, VERSION, LIMIT)
+LIMIT = 'min' # Selection of the carbon flux limit: mean, min, max
+DIS_SUB = 800 # maximum distance between positive anomaly and subduction zone
+OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}_longitude'.format(DIS_SUB, VERSION, LIMIT)
 UPPER_RATE = getRate.upper_mantle() # dict shape: age_length * 1
 LOWER_RATE = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
 COMPRRESSION_CORRECTION = True
@@ -34,7 +34,7 @@ def mkdir(path):
 
 
 def read_reconstructed_tomography(age):
-    fname = 'Reconstructed_TomographyModel/{}_{}_newrate/{}_{}.nc'.format(MODEL, VERSION, MODEL, age)
+    fname = 'Reconstructed_TomographyModel/{}_{}/{}_{}.nc'.format(MODEL, VERSION, MODEL, age)
     file = Dataset(fname)
     dv = file.variables['z'][:]
     # read mean positive velocity (MPV)
@@ -243,14 +243,15 @@ def calculate_flux(age, dv_limit):
                 volume = area * delta_dep
                 # convert km^3/Myr to km^3/yr
                 volume *= 1e-6 
-                slab_flux[j] += volume 
+                area_flux = volume / SubductionZone_nearest_data[3]
+                slab_flux[j] += area_flux 
                 
                 #calculate carbon flux, unit: Mt/yr
                 # lithosphere_carbon_flux += volume * SubductionZone_nearest_data[4]
                 # serpentinite_carbon_flux += volume * SubductionZone_nearest_data[5]
                 # crust_carbon_flux += volume * SubductionZone_nearest_data[6]
                 # sediment_carbon_flux += volume * SubductionZone_nearest_data[7]
-                total_carbon_flux[j] += volume * SubductionZone_nearest_data[8]
+                total_carbon_flux[j] += area_flux * SubductionZone_nearest_data[8]
     print('%s Ma has finished.'%age)
     return [age, slab_flux, total_carbon_flux]
 

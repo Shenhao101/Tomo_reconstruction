@@ -4,7 +4,7 @@ Created on Sun Jan 21 17:42:38 2024
 
 1. extract the location of past subduction zone from plate motion model
 2. calculate plate thickness at subduction zone
-3. calculate carbonate volume density at subduction zone
+3. extract carbonate area density at subduction zone
 
 @author: shenhao
 @email: shenhao@mail.iggcas.ac.cn
@@ -293,14 +293,12 @@ def plate_thickness(subduction_zones, agegrid_file, age):
     return age_subduction, thickness_subduction
     
     
-def carbon_volume_density(subduction_zones, grid_file, thickness_subduction, age):
+def carbon_density(subduction_zones, grid_file, thickness_subduction, age):
     """
     Calculate carbon volume density at subduction zones.
 
     The carbon area density is interpolated from a gridded carbon-density
-    model to the locations of subduction zones. The interpolated carbon
-    area density is then converted to carbon volume density using the
-    oceanic lithosphere thickness.
+    model to the locations of subduction zones. 
 
     Parameters
     ----------
@@ -332,12 +330,10 @@ def carbon_volume_density(subduction_zones, grid_file, thickness_subduction, age
         for j in range(len(carbon_subduction[i])):
             # convert Mt/m^2 to Mt/km^2
             carbon_subduction[i][j] *= 1e6
-            # convert Mt/km^2 to Mt/km^3
-            carbon_subduction[i][j] /= thickness_subduction[i][j] 
     return carbon_subduction
     
 
-def carbon_volume_desity_lithosphere(subduction_zones, grid_file, thickness_subduction, age):
+def carbon_desity_lithosphere(subduction_zones, grid_file, thickness_subduction, age):
     fname = grid_file.format(age)
     file = Dataset(fname)
     lon_grid = file.variables['x'][:]
@@ -356,8 +352,6 @@ def carbon_volume_desity_lithosphere(subduction_zones, grid_file, thickness_subd
         for j in range(len(carbon_subduction[i])):
             # convert Mt/m^2 to Mt/km^2
             carbon_subduction[i][j] *= 1e6
-            # convert Mt/km^2 to Mt/km^3
-            carbon_subduction[i][j] /= thickness_subduction[i][j] 
     return carbon_subduction
 
 
@@ -391,7 +385,7 @@ def save_to_txt(fname, subduction_zones, age, thickness, lithosphere, serpentini
                 # mark the anomaly value at some points
                 # especially in the mediterranean region, there are several points 
                 # with extremly young seafloor age but very high sediment carbon
-                if total[i][j] > 10:
+                if total[i][j] / thickness[i][j] > 10:
                     file.write('*')
 
                 string = '%.2f' % subduction_zones[i][j][0]
@@ -435,24 +429,24 @@ def calculate_carbon_subduction(age, subduction_zones, output_path):
 
     # carbon in the lithosphere
     lithosphere_file = 'Data_carbon_Muller2022/Lithosphere/mean/carbon_lithosphere_grid_{}.nc'
-    lithosphere_carbon_subduction = carbon_volume_desity_lithosphere(
+    lithosphere_carbon_subduction = carbon_desity_lithosphere(
         subduction_zones, lithosphere_file, thickness_subduction, age
     )
     # carbon in the serpentinite
     serpentinite_file = 'Data_carbon_Muller2022/Serpentinite/mean/carbon_serpentinite_grid_{}.nc'
-    serpentinite_carbon_subduction = carbon_volume_density(
+    serpentinite_carbon_subduction = carbon_density(
         subduction_zones, serpentinite_file, thickness_subduction, age
     )
 
     # carbon in the crust
     crust_file = 'Data_carbon_Muller2022/Crust/mean/carbon_crust_grid_{}.nc'
-    crust_carbon_subduction = carbon_volume_density(
+    crust_carbon_subduction = carbon_density(
         subduction_zones, crust_file, thickness_subduction, age
     )
 
     # carbon in the sediment
     sediment_file = 'Data_carbon_Muller2022/Sediment/mean/carbon_sediment_grid_{}.nc'
-    sediment_carbon_subduction = carbon_volume_density(
+    sediment_carbon_subduction = carbon_density(
         subduction_zones, sediment_file, thickness_subduction, age
     )
 
