@@ -355,7 +355,7 @@ def load_GLAD_M25(fname):
 
 def read_SubductionZone_coordinate(age):
     subduction_zone = []
-    fname = 'Carbon_VolumeDensity_SubductionZone/mean/carbon_volume_density_{}.txt'.format(age)
+    fname = 'Carbon_Density_SubductionZone/mean/carbon_density_{}.txt'.format(age)
     with open(fname, 'r') as file:
         file.readline()
         for each_line in file.readlines():

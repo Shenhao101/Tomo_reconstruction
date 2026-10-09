@@ -366,15 +366,15 @@ def save_to_txt(fname, subduction_zones, age, thickness, lithosphere, serpentini
         file.write(string)
         string = 'Plate_Thickness(km)'  + ' ' * 4 # length: 23
         file.write(string)
-        string = 'lithosphere_carbon(Mt/km^3)'  + ' ' * 4 # length: 31
+        string = 'lithosphere_carbon(Mt/km^2)'  + ' ' * 4 # length: 31
         file.write(string)
-        string = 'Serpentinite_carbon(Mt/km^3)'  + ' ' * 4 # length: 32
+        string = 'Serpentinite_carbon(Mt/km^2)'  + ' ' * 4 # length: 32
         file.write(string)
-        string = 'Crust_carbon(Mt/km^3)'  + ' ' * 4 # length: 25
+        string = 'Crust_carbon(Mt/km^2)'  + ' ' * 4 # length: 25
         file.write(string)
-        string = 'Sediment_carbon(Mt/km^3)'  + ' ' * 4 # length: 28
+        string = 'Sediment_carbon(Mt/km^2)'  + ' ' * 4 # length: 28
         file.write(string)
-        string = 'Total_carbon(Mt/km^3)'  + ' ' * 4 # length: 25
+        string = 'Total_carbon(Mt/km^2)'  + ' ' * 4 # length: 25
         file.write(string + '\n')
         
         # write data
@@ -460,7 +460,7 @@ def calculate_carbon_subduction(age, subduction_zones, output_path):
         total_carbon_subduction.append(total_carbon_subduction_each)
 
     # step4: save to file
-    output_file = output_path + 'carbon_volume_density_{}.txt'.format(age)
+    output_file = output_path + 'carbon_density_{}.txt'.format(age)
     save_to_txt(
         output_file, subduction_zones, age_subduction, thickness_subduction,
         lithosphere_carbon_subduction, serpentinite_carbon_subduction,
@@ -508,7 +508,7 @@ if __name__=='__main__':
             else:
                 topology_filenames.remove(topology_filename)
     
-    output_path = 'Carbon_VolumeDensity_SubductionZone/mean/'
+    output_path = 'Carbon_Density_SubductionZone/mean/'
     mkdir(output_path)
 
 

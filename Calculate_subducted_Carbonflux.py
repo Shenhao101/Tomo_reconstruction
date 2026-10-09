@@ -19,14 +19,14 @@ from scipy.interpolate import interp1d
 # parameters
 EARTH_RADIUS = 6371
 # optional model: TX2019slab, UU-P07, LLNL_G3D_JPS, MITP08, GLAD_M25
-MODEL = 'TX2019slab'
+MODEL = 'GLAD_M25'
 VERSION = 'Dmax200'
-LIMIT = 'min' # Selection of the carbon flux limit: mean, min, max
-DIS_SUB= 800 # maximum distance between positive anomaly and subduction zone
-OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}'.format(DIS_SUB, VERSION, LIMIT)
+LIMIT = 'mean' # Selection of the carbon flux limit: mean, min, max
+DIS_SUB= 1000 # maximum distance between positive anomaly and subduction zone
+OUTPUT_PATH = 'Carbon_flux/Dis_sub{}_{}_{}_uncorrection'.format(DIS_SUB, VERSION, LIMIT)
 UPPER_RATE = getRate.upper_mantle() # dict shape: age_length * 1
 LOWER_RATE = getRate.lower_mantle() # shape: 181*361(-90~90, -180~180)
-COMPRRESSION_CORRECTION = True
+COMPRRESSION_CORRECTION = False
 
 
 def mkdir(path):
@@ -45,7 +45,7 @@ def read_reconstructed_tomography(age):
 
 def read_subduction_zone_data(age):
     subduction_zone_data = []
-    fname = 'Carbon_VolumeDensity_SubductionZone/mean/carbon_volume_density_{}.txt'.format(age)
+    fname = 'Carbon_Density_SubductionZone/mean/carbon_density_{}.txt'.format(age)
     with open(fname, 'r') as file:
         file.readline()
         for each_line in file.readlines():
