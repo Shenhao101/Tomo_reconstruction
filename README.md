@@ -44,7 +44,7 @@ Input directory:
 - `./Muller_etal_2019_PlateMotionModel_v2.0_Tectonics_Updated`
 
 Output directory: 
-- `./Carbon_VolumeDensity_SubductionZone`
+- `./Carbon_Density_SubductionZone`
 
 ---
 
@@ -58,7 +58,7 @@ This script reconstructs the tomography model from the spatial domain into the g
 
 Input directory: 
 - `./Original_TomographyModel`
-- `./Carbon_VolumeDensity_SubductionZone`
+- `./Carbon_Density_SubductionZone`
 
 Output directory: 
 - `./Reconstructed_TomographyModel`
@@ -75,7 +75,7 @@ This script calculates the global carbon flux subducted into the mantle througho
 
 Input directory: 
 - `./Reconstructed_TomographyModel`
-- `./Carbon_VolumeDensity_SubductionZone`
+- `./Carbon_Density_SubductionZone`
 
 Output directory:
 - `./Carbon_flux`
@@ -92,7 +92,7 @@ This script calculates the longitudinal distribution of subducted carbon flux to
 
 Input directory: 
 - `./Reconstructed_TomographyModel`
-- `./Carbon_VolumeDensity_SubductionZone`
+- `./Carbon_Density_SubductionZone`
 
 Output directory:
 - `./Carbon_flux`
