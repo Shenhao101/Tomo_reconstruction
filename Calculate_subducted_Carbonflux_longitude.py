@@ -44,7 +44,7 @@ def read_reconstructed_tomography(age):
 
 def read_subduction_zone_data(age):
     subduction_zone_data = []
-    fname = 'Carbon_VolumeDensity_SubductionZone/mean/carbon_volume_density_{}.txt'.format(age)
+    fname = 'Carbon_Density_SubductionZone/mean/carbon_density_{}.txt'.format(age)
     with open(fname, 'r') as file:
         file.readline()
         for each_line in file.readlines():

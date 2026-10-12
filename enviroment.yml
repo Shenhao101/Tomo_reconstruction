@@ -6,4 +6,3 @@ dependencies:
   - gplately
   - pykrige
   - openpyxl
-prefix: /home/hao/miniconda3/envs/carbon_flux
